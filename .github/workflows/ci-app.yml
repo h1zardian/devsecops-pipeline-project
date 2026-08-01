@@ -74,7 +74,7 @@ jobs:
           buildah push ${{ steps.prep.outputs.full_image }} docker-archive:django-app.tar
 
       - name: Trivy Vulnerability Scan (Pre-Push Gate)
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           input: 'django-app.tar'
           format: 'table'
