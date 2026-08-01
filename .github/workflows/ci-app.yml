@@ -93,8 +93,8 @@ jobs:
       - name: Push Image to GHCR
         id: push-image
         run: |
-          buildah push --authfile ~/.docker/config.json ${{ steps.prep.outputs.full_image }}
-          DIGEST=$(buildah inspect --format '{{.Digest}}' ${{ steps.prep.outputs.full_image }})
+          buildah push --digestfile /tmp/digest.txt --authfile ~/.docker/config.json ${{ steps.prep.outputs.full_image }}
+          DIGEST=$(cat /tmp/digest.txt)
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Install Cosign & Syft
