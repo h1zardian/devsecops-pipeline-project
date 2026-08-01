@@ -9,8 +9,7 @@
 - name: Deploy ingress-nginx via Helm
   kubernetes.core.helm:
     name: ingress-nginx
-    chart_ref: ingress-nginx
-    chart_repo_url: https://kubernetes.github.io/ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
     chart_version: "{{ ingress_chart_version }}"
     release_namespace: "{{ ingress_namespace }}"
     state: present

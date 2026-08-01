@@ -9,8 +9,7 @@
 - name: Deploy ArgoCD via Helm
   kubernetes.core.helm:
     name: argocd
-    chart_ref: argo-cd
-    chart_repo_url: https://argoproj.github.io/argo-helm
+    chart_ref: argo/argo-cd
     chart_version: "{{ argocd_chart_version }}"
     release_namespace: "{{ argocd_namespace }}"
     values: "{{ lookup('template', 'argocd-values.yaml.j2') | from_yaml }}"

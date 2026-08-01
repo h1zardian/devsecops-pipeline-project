@@ -9,8 +9,7 @@
 - name: Deploy External Secrets Operator via Helm
   kubernetes.core.helm:
     name: external-secrets
-    chart_ref: external-secrets
-    chart_repo_url: https://charts.external-secrets.io
+    chart_ref: external-secrets/external-secrets
     chart_version: "{{ eso_chart_version }}"
     release_namespace: "{{ eso_namespace }}"
     state: present

@@ -9,8 +9,7 @@
 - name: Deploy kube-prometheus-stack via Helm
   kubernetes.core.helm:
     name: kube-prometheus-stack
-    chart_ref: kube-prometheus-stack
-    chart_repo_url: https://prometheus-community.github.io/helm-charts
+    chart_ref: prometheus-community/kube-prometheus-stack
     chart_version: "{{ monitoring_chart_version }}"
     release_namespace: "{{ monitoring_namespace }}"
     values: "{{ lookup('template', 'prometheus-values.yaml.j2') | from_yaml }}"

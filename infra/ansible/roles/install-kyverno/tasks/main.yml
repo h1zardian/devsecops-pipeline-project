@@ -9,8 +9,7 @@
 - name: Deploy Kyverno Admission Controller via Helm
   kubernetes.core.helm:
     name: kyverno
-    chart_ref: kyverno
-    chart_repo_url: https://kyverno.github.io/kyverno/
+    chart_ref: kyverno/kyverno
     chart_version: "{{ kyverno_chart_version }}"
     release_namespace: "{{ kyverno_namespace }}"
     state: present
