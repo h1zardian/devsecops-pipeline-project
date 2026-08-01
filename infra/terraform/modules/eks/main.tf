@@ -53,3 +53,50 @@ module "eks" {
     ManagedBy   = "Terraform"
   }
 }
+
+# Pre-destroy cleanup: Remove Kubernetes-created cloud resources (LoadBalancers,
+# Security Groups) that are not managed by Terraform but block VPC deletion.
+resource "null_resource" "cleanup_k8s_cloud_resources" {
+  depends_on = [module.eks]
+
+  triggers = {
+    cluster_name = var.cluster_name
+    region       = var.region
+    vpc_id       = var.vpc_id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      echo "Cleaning up Kubernetes-managed cloud resources before EKS destroy..."
+
+      # Delete all Classic Load Balancers in the VPC
+      for elb in $(aws elb describe-load-balancers --region ${self.triggers.region} \
+        --query "LoadBalancerDescriptions[?VPCId=='${self.triggers.vpc_id}'].LoadBalancerName" --output text 2>/dev/null); do
+        echo "Deleting Classic ELB: $elb"
+        aws elb delete-load-balancer --load-balancer-name "$elb" --region ${self.triggers.region} || true
+      done
+
+      # Delete all ALB/NLB in the VPC
+      for arn in $(aws elbv2 describe-load-balancers --region ${self.triggers.region} \
+        --query "LoadBalancers[?VpcId=='${self.triggers.vpc_id}'].LoadBalancerArn" --output text 2>/dev/null); do
+        echo "Deleting ELBv2: $arn"
+        aws elbv2 delete-load-balancer --load-balancer-arn "$arn" --region ${self.triggers.region} || true
+      done
+
+      # Wait for ENIs to detach
+      echo "Waiting 15s for ENI detachment..."
+      sleep 15
+
+      # Delete orphaned non-default security groups in the VPC
+      for sg in $(aws ec2 describe-security-groups --region ${self.triggers.region} \
+        --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" \
+        --query "SecurityGroups[?GroupName!='default'].GroupId" --output text 2>/dev/null); do
+        echo "Deleting orphaned SG: $sg"
+        aws ec2 delete-security-group --group-id "$sg" --region ${self.triggers.region} || true
+      done
+
+      echo "Kubernetes cloud resource cleanup complete."
+    EOT
+  }
+}

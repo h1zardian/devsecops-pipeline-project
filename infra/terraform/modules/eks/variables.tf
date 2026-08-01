@@ -13,6 +13,12 @@ variable "subnet_ids" {
 variable "environment" {
   type = string
 }
+
+variable "region" {
+  description = "AWS region, used by the pre-destroy cleanup provisioner"
+  type        = string
+}
+
 variable "cluster_endpoint_public_access_cidrs" {
   type        = list(string)
   description = "List of CIDR blocks that can access the EKS public API server endpoint"
