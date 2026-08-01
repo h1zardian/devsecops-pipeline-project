@@ -7,7 +7,7 @@ help:
 	@echo "  make kind-up          - Spin up local Kind Kubernetes cluster"
 	@echo "  make kind-down        - Destroy local Kind Kubernetes cluster"
 	@echo "  make k8s-local-deploy - Deploy Django Helm chart to local cluster (using local K8s secret)"
-	@echo "  make init-state       - Run bootstrap-state.sh for AWS S3 + DynamoDB TF backend"
+	@echo "  make init-state       - Run bootstrap-state.sh for AWS S3 TF backend"
 	@echo "  make cluster-up       - Apply AWS Terraform infrastructure (VPC, EKS, RDS, OIDC)"
 	@echo "  make cluster-down     - Destroy AWS Terraform infrastructure"
 	@echo "  make ansible-bootstrap- Run Day 0 Ansible cluster bootstrap (ArgoCD, Kyverno, ESO, Prometheus)"
