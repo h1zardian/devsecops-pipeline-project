@@ -95,7 +95,7 @@ jobs:
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Install Cosign & Syft
-        uses: sigstore/cosign-installer@v3.4.0
+        uses: sigstore/cosign-installer@v3.8.0
 
       - name: Install Syft
         run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
