@@ -25,7 +25,7 @@ jobs:
     name: Security Scans (Gitleaks + Bandit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -35,9 +35,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Bandit SAST Scan
         run: |
@@ -54,7 +54,7 @@ jobs:
       base-image: ${{ steps.prep.outputs.base_image }}
       image-name: ${{ steps.prep.outputs.full_image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Prepare Image Tag & Metadata
         id: prep
@@ -74,7 +74,7 @@ jobs:
           buildah push ${{ steps.prep.outputs.full_image }} docker-archive:django-app.tar
 
       - name: Trivy Vulnerability Scan (Pre-Push Gate)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           input: 'django-app.tar'
           format: 'table'
@@ -97,11 +97,11 @@ jobs:
           DIGEST=$(cat /tmp/digest.txt)
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
 
-      - name: Install Cosign & Syft
+      - name: Install Cosign
         uses: sigstore/cosign-installer@v3.8.0
 
       - name: Install Syft
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        uses: anchore/sbom-action/download-syft@v0.18.0
 
       - name: Generate & Attach SBOM (Syft CycloneDX)
         run: |
@@ -135,7 +135,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 

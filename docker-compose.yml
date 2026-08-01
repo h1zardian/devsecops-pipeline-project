@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-hospital_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

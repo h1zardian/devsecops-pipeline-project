@@ -16,12 +16,12 @@ jobs:
     name: Helm Template, Kubeconform & Kyverno Dry-Run
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Helm & Kubeconform
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar -xz -C /usr/local/bin kubeconform
+          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | tar -xz -C /usr/local/bin kubeconform
 
       - name: Render Helm Template & Kubeconform Schema Validation
         run: |
@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Kyverno CLI
         run: |
-          curl -sSfL https://github.com/kyverno/kyverno/releases/download/v1.11.4/kyverno-cli_v1.11.4_linux_x86_64.tar.gz | tar -xz -C /usr/local/bin kyverno
+          curl -sSfL https://github.com/kyverno/kyverno/releases/download/v1.18.2/kyverno-cli_v1.18.2_linux_x86_64.tar.gz | tar -xz -C /usr/local/bin kyverno
 
       - name: Kyverno Policy Test & Apply Dry-Run
         run: |
@@ -37,7 +37,7 @@ jobs:
           kyverno apply k8s/policies/require-non-root.yaml k8s/policies/require-resource-limits.yaml k8s/policies/disallow-latest-tag.yaml --resource rendered.yaml
 
       - name: Checkov Kubernetes Scan
-        uses: bridgecrewio/checkov-action@master
+        uses: bridgecrewio/checkov-action@v12
         with:
           directory: k8s/
           framework: kubernetes
