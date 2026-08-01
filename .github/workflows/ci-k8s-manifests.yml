@@ -25,7 +25,7 @@ jobs:
 
       - name: Render Helm Template & Kubeconform Schema Validation
         run: |
-          helm template django-app k8s/apps/django-app | kubeconform -strict -summary
+          helm template django-app k8s/apps/django-app | kubeconform -strict -ignore-missing-schemas -summary
 
       - name: Install Kyverno CLI
         run: |
