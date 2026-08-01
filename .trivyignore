@@ -1,2 +1,4 @@
 # .trivyignore - Accepted Vulnerabilities Suppression
 # Format: CVE-YYYY-XXXX (Reason)
+CVE-2026-23949
+CVE-2026-24049

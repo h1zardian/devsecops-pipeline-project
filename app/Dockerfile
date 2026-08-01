@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2-dev libxslt-dev \
     libjpeg62-turbo-dev zlib1g-dev libfreetype6-dev
 
-# Upgrade pip
-RUN pip install --upgrade pip
+# Upgrade pip and build dependencies
+RUN pip install --upgrade pip "setuptools>=75.0.0" "wheel>=0.46.2" "jaraco.context>=6.1.0"
 
 # Install project requirements
 COPY requirements.txt .
@@ -48,7 +48,7 @@ COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
 
 # Install dependencies
-RUN pip install --no-cache /wheels/*
+RUN pip install --no-cache-dir --upgrade pip "setuptools>=75.0.0" "wheel>=0.46.2" "jaraco.context>=6.1.0" && pip install --no-cache /wheels/*
 
 # Copy the entrypoint.sh script (if you have one)
 COPY --chown=app:app ./entrypoint.sh /home/app/web
