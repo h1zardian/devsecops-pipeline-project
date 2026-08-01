@@ -7,7 +7,7 @@ image:
   pullPolicy: IfNotPresent
   tag: "sha-init123"
 
-sqlHost: "devsecops-postgres-dev"
+sqlHost: "devsecops-postgres-dev.cmksk3juhzgm.ap-south-1.rds.amazonaws.com"
 allowedHosts: "app.example.com"
 
 externalSecrets:
@@ -19,7 +19,8 @@ externalSecrets:
 serviceAccount:
   create: true
   name: django-sa
-  annotations: {}
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::072329308666:role/devsecops-eso-irsa-role-dev"
 
 ingress:
   enabled: true
