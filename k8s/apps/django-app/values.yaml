@@ -8,7 +8,7 @@ image:
   tag: "sha-c9487d9"
 
 sqlHost: "devsecops-postgres-dev.cmksk3juhzgm.ap-south-1.rds.amazonaws.com"
-allowedHosts: "app.example.com"
+allowedHosts: "*"
 
 externalSecrets:
   enabled: true
