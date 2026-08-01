@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "django-app.fullname" . }}-config
+  labels:
+    app.kubernetes.io/name: django-app
+data:
+  ALLOWED_HOSTS: {{ .Values.allowedHosts | default .Values.ingress.host | quote }}
+  PYTHONDONTWRITEBYTECODE: "1"
+  DATABASE: "postgres"
+  SQL_ENGINE: "django.db.backends.postgresql"
+  POSTGRES_DB: "hospital_db"
+  POSTGRES_USER: "postgres"
+  SQL_PORT: "5432"
+  SQL_HOST: {{ .Values.sqlHost | quote }}

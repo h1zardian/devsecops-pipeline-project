@@ -1,0 +1,3 @@
+---
+eso_namespace: external-secrets
+eso_chart_version: "0.9.11"

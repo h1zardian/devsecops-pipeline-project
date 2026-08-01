@@ -1,0 +1,6 @@
+apiVersion: v2
+name: django-app
+description: DevSecOps Hospital Management Django Application Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

@@ -1,0 +1,3 @@
+---
+monitoring_namespace: monitoring
+monitoring_chart_version: "55.4.0"

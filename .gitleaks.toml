@@ -1,0 +1,13 @@
+# .gitleaks.toml - Gitleaks Custom Configuration
+title = "gitleaks config"
+
+[allowlist]
+description = "Allowed commit messages or dummy test secrets"
+regexes = [
+  '''(?i)example_password''',
+  '''(?i)dummy_token'''
+]
+paths = [
+  '''\.trivyignore$''',
+  '''README\.md$'''
+]

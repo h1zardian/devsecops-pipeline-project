@@ -1,0 +1,37 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "django-app.fullname" . }}-alerts
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: django-app
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(django_http_responses_total_by_status_total{status=~"5.."}[5m]))
+            / sum(rate(django_http_responses_total_by_status_total[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Django error rate above 5%"
+
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Django pod is crash-looping"
+
+        - alert: HPAMaxedOut
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="{{ .Release.Namespace }}"}
+            == kube_horizontalpodautoscaler_spec_max_replicas{namespace="{{ .Release.Namespace }}"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HPA at maximum replicas — application may need scaling"

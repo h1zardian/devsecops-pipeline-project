@@ -1,0 +1,10 @@
+---
+- name: Apply Django ArgoCD Application CRD
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'app-django.yaml.j2') | from_yaml }}"
+
+- name: Apply App-of-Apps ArgoCD Application CRD
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'app-of-apps.yaml.j2') | from_yaml }}"

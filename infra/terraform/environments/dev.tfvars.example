@@ -1,0 +1,6 @@
+aws_region   = "us-east-1"
+environment  = "dev"
+cluster_name = "devsecops-eks-cluster-dev"
+vpc_cidr     = "10.0.0.0/16"
+db_password  = "CHANGE_ME_IN_ENV_OR_SECRETS"
+github_repo  = "h1zardian/devsecops-platform-provisioning-pipeline"

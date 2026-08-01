@@ -1,0 +1,48 @@
+{
+  "name": "DevSecOps Platform Provisioning Pipeline",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/terraform:1": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
+      "moby": false,
+      "installDockerBuildx": true
+    },
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers-extra/features/kyverno-cli:1": {},
+    "ghcr.io/devcontainers-extra/features/syft:1": {},
+    "ghcr.io/devcontainers-extra/features/cosign:1": {},
+    "ghcr.io/JasonTheDeveloper/features/trivy:1": {},
+    "ghcr.io/jsburckhardt/devcontainer-features/gitleaks:1": {}
+
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "terraform.languageServer.enable": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "hashicorp.terraform",
+        "ms-azuretools.vscode-docker",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-yaml",
+        "redhat.ansible",
+        "clutchsecurity.clutch-gitleaks-secrets-scanner"
+      ]
+    }
+  },
+
+  "forwardPorts": [8000, 5432, 8080, 3000, 9090],
+
+  "postCreateCommand": "if [ -f app/requirements.txt ]; then pip install -r app/requirements.txt; fi",
+
+  "remoteUser": "vscode"
+}

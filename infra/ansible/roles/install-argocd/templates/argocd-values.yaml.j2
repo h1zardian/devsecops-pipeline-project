@@ -1,0 +1,12 @@
+global:
+  domain: argocd.example.com
+
+server:
+  extraArgs:
+    - --insecure
+  config:
+    application.instanceLabelKey: argocd.argoproj.io/instance
+
+configs:
+  params:
+    server.insecure: true

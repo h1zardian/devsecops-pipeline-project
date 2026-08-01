@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-app-dashboard
+  labels:
+    grafana_dashboard: "1"
+    release: monitoring
+data:
+  django-app.json: |-
+{{ .Files.Get "dashboards/django-app.json" | indent 4 }}

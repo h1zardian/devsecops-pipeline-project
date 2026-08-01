@@ -1,0 +1,11 @@
+kube-prometheus-stack:
+  grafana:
+    enabled: true
+    adminPassword: "prom-operator"
+    dashboardsConfigMaps:
+      default: "django-app-dashboard"
+  prometheus:
+    prometheusSpec:
+      serviceMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+

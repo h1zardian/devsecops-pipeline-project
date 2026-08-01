@@ -1,0 +1,49 @@
+{
+  "features": {
+    "ghcr.io/devcontainers-extra/features/cosign:1": {
+      "version": "1.0.10",
+      "resolved": "ghcr.io/devcontainers-extra/features/cosign@sha256:f101399b455a37d28e9524b1ce338e5a6101859ade6c00cf2a9f9c51c3447dea",
+      "integrity": "sha256:f101399b455a37d28e9524b1ce338e5a6101859ade6c00cf2a9f9c51c3447dea"
+    },
+    "ghcr.io/devcontainers-extra/features/kyverno-cli:1": {
+      "version": "1.0.10",
+      "resolved": "ghcr.io/devcontainers-extra/features/kyverno-cli@sha256:82289eef1dd78955b98f470168cae5749c3a2179d5e7e73a980a96319c2378e0",
+      "integrity": "sha256:82289eef1dd78955b98f470168cae5749c3a2179d5e7e73a980a96319c2378e0"
+    },
+    "ghcr.io/devcontainers-extra/features/syft:1": {
+      "version": "1.0.10",
+      "resolved": "ghcr.io/devcontainers-extra/features/syft@sha256:1cfd858d0fc6eb4bd49b335cf94af734d6e6bd617a4a5265f54f07dbc72771e9",
+      "integrity": "sha256:1cfd858d0fc6eb4bd49b335cf94af734d6e6bd617a4a5265f54f07dbc72771e9"
+    },
+    "ghcr.io/devcontainers/features/aws-cli:1": {
+      "version": "1.1.4",
+      "resolved": "ghcr.io/devcontainers/features/aws-cli@sha256:1f93c8315b7a6d76982ebb2269f8b0d50413fc0f965c032edf4aee0caceb73ef",
+      "integrity": "sha256:1f93c8315b7a6d76982ebb2269f8b0d50413fc0f965c032edf4aee0caceb73ef"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
+      "version": "4.0.0",
+      "resolved": "ghcr.io/devcontainers/features/docker-in-docker@sha256:4fa87399214366e320d489991769c4f3f461e1ffe461f54eea78a41b34945bb5",
+      "integrity": "sha256:4fa87399214366e320d489991769c4f3f461e1ffe461f54eea78a41b34945bb5"
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "1.3.1",
+      "resolved": "ghcr.io/devcontainers/features/kubectl-helm-minikube@sha256:bbe8adf6b37fff8c67412ab0a4579f4c2f30bbaba1d9a5cebd9e38bade54025b",
+      "integrity": "sha256:bbe8adf6b37fff8c67412ab0a4579f4c2f30bbaba1d9a5cebd9e38bade54025b"
+    },
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.4.4",
+      "resolved": "ghcr.io/devcontainers/features/terraform@sha256:c6a4ed166fb749670db856c549f8858037c0af9ab3aacaf85fcb8634fadf6b05",
+      "integrity": "sha256:c6a4ed166fb749670db856c549f8858037c0af9ab3aacaf85fcb8634fadf6b05"
+    },
+    "ghcr.io/JasonTheDeveloper/features/trivy:1": {
+      "version": "1.0.0",
+      "resolved": "ghcr.io/jasonthedeveloper/features/trivy@sha256:c2f95d6884821376bec12a7b778fce22dbfc41267bda00c2d09e653eea18345b",
+      "integrity": "sha256:c2f95d6884821376bec12a7b778fce22dbfc41267bda00c2d09e653eea18345b"
+    },
+    "ghcr.io/jsburckhardt/devcontainer-features/gitleaks:1": {
+      "version": "1.0.0",
+      "resolved": "ghcr.io/jsburckhardt/devcontainer-features/gitleaks@sha256:8ac4946ade23f372e9c23f262c2006c8dd29090bd2b92b1f14948de48eb077d4",
+      "integrity": "sha256:8ac4946ade23f372e9c23f262c2006c8dd29090bd2b92b1f14948de48eb077d4"
+    }
+  }
+}

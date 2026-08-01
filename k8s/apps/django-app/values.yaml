@@ -1,0 +1,41 @@
+replicaCount: 2
+
+awsRegion: "us-east-1"
+
+image:
+  repository: ghcr.io/h1zardian/django-app
+  pullPolicy: IfNotPresent
+  tag: "sha-init123"
+
+sqlHost: "devsecops-postgres-dev"
+allowedHosts: "app.example.com"
+
+externalSecrets:
+  enabled: true
+  environment: "dev"
+  secretKey: "django-insecure-dev-key-change-in-prod"
+  postgresPassword: "postgrespassword"
+
+serviceAccount:
+  create: true
+  name: django-sa
+  annotations: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80

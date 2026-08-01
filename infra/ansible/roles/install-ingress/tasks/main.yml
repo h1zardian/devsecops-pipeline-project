@@ -1,0 +1,18 @@
+---
+- name: Create ingress-nginx namespace
+  kubernetes.core.k8s:
+    name: "{{ ingress_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+
+- name: Deploy ingress-nginx via Helm
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx
+    chart_repo_url: https://kubernetes.github.io/ingress-nginx
+    chart_version: "{{ ingress_chart_version }}"
+    release_namespace: "{{ ingress_namespace }}"
+    state: present
+    wait: true
+    wait_timeout: 300

@@ -1,0 +1,4 @@
+[tool.bandit]
+targets = ["app"]
+exclude_dirs = ["app/console/settings.py"]
+skips = ["B101"]
