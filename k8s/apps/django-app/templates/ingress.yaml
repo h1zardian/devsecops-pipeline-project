@@ -4,17 +4,29 @@ kind: Ingress
 metadata:
   name: {{ include "django-app.fullname" . }}
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: {{ .Values.ingress.className }}
+  {{- if and .Values.ingress.host (ne .Values.ingress.host "app.example.com") }}
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
       secretName: {{ include "django-app.fullname" . }}-tls
+  {{- end }}
   rules:
+    {{- if and .Values.ingress.host (ne .Values.ingress.host "*") }}
     - host: {{ .Values.ingress.host }}
       http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "django-app.fullname" . }}
+                port:
+                  number: 8000
+    {{- end }}
+    - http:
         paths:
           - path: /
             pathType: Prefix
