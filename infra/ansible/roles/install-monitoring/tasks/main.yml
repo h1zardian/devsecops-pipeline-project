@@ -16,4 +16,4 @@
     values: "{{ lookup('template', 'prometheus-values.yaml.j2') | from_yaml }}"
     state: present
     wait: true
-    wait_timeout: 300
+    wait_timeout: "5m0s"

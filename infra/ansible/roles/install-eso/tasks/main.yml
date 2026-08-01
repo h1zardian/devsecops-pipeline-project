@@ -15,4 +15,4 @@
     release_namespace: "{{ eso_namespace }}"
     state: present
     wait: true
-    wait_timeout: 300
+    wait_timeout: "5m0s"
