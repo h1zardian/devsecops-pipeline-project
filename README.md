@@ -1,6 +1,6 @@
 # DevSecOps Well-Architected Platform & Provisioning Pipeline
 
-[![CI Build](https://github.com/h1zardian/devsecops-platform-provisioning-pipeline/actions/workflows/ci-app.yml/badge.svg)](https://github.com/h1zardian/devsecops-platform-provisioning-pipeline/actions)
+[![CI Build](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-app.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions)
 [![SLSA Level 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -103,7 +103,7 @@ make cluster-up
 
 ### 3. Bootstrap Day 0 Platform Controllers
 ```bash
-aws eks update-kubeconfig --name devsecops-eks-cluster --region us-east-1
+aws eks update-kubeconfig --name devsecops-eks-cluster --region ap-south-1
 make ansible-bootstrap
 ```
 

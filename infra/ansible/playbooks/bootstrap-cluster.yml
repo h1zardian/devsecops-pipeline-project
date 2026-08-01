@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: false
   vars:
-    git_repo_url: "{{ lookup('env', 'GIT_REPO_URL') | default('https://github.com/h1zardian/devsecops-platform-provisioning-pipeline.git', true) }}"
+    git_repo_url: "{{ lookup('env', 'GIT_REPO_URL') | default('https://github.com/h1zardian/devsecops-pipeline-project.git', true) }}"
     argocd_chart_version: "5.52.0"
     kyverno_chart_version: "3.1.4"
     eso_chart_version: "0.9.11"

@@ -50,13 +50,14 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ap-south-1
 
       - name: Terraform Init & Plan
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         run: |
           cd infra/terraform
+          [ -f environments/dev.tfvars ] || cp environments/dev.tfvars.example environments/dev.tfvars
           terraform init
           terraform plan -var-file=environments/dev.tfvars -out=tfplan
 
@@ -90,7 +91,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ap-south-1
 
       - name: Terraform Apply
         env:

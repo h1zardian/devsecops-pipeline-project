@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Script to bootstrap S3 Bucket and DynamoDB Table for Terraform Remote State
-AWS_REGION="${AWS_REGION:-us-east-1}"
-BUCKET_NAME="${TF_STATE_BUCKET:-devsecops-tf-state-backend}"
+AWS_REGION="${AWS_REGION:-ap-south-1}"
+BUCKET_NAME="${TF_STATE_BUCKET:-devsecops-tf-state-backend-072329308666}"
 DYNAMODB_TABLE="${TF_LOCK_TABLE:-devsecops-tf-locks}"
 
 echo "==> Bootstrapping Terraform Remote State Backend"

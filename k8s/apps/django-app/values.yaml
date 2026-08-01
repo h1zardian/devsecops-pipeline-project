@@ -1,9 +1,9 @@
 replicaCount: 2
 
-awsRegion: "us-east-1"
+awsRegion: "ap-south-1"
 
 image:
-  repository: ghcr.io/h1zardian/django-app
+  repository: ghcr.io/h1zardian/devsecops-pipeline-project
   pullPolicy: IfNotPresent
   tag: "sha-init123"
 

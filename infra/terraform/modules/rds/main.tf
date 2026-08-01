@@ -33,7 +33,7 @@ resource "aws_db_instance" "postgres" {
   allocated_storage      = 20
   max_allocated_storage  = 50
   engine                 = "postgres"
-  engine_version         = "15.4"
+  engine_version         = "15"
   instance_class         = var.environment == "prod" ? "db.t3.medium" : "db.t3.micro"
   db_name                = "hospital_db"
   username               = "postgres"

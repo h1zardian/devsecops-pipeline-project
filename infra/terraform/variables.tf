@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region for resources"
   type        = string
-  default     = "us-east-1"
+  default     = "ap-south-1"
 }
 
 variable "environment" {
@@ -31,7 +31,7 @@ variable "db_password" {
 variable "github_repo" {
   description = "GitHub repository format owner/repo for OIDC trust"
   type        = string
-  default     = "h1zardian/devsecops-platform-provisioning-pipeline"
+  default     = "h1zardian/devsecops-pipeline-project"
 }
 
 variable "cluster_endpoint_public_access_cidrs" {
