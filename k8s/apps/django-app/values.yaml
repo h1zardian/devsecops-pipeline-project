@@ -5,7 +5,7 @@ awsRegion: "ap-south-1"
 image:
   repository: "ghcr.io/h1zardian/devsecops-pipeline-project"
   pullPolicy: IfNotPresent
-  tag: "sha-c9487d9"
+  tag: "sha-699017b"
 
 sqlHost: "devsecops-postgres-dev.cmksk3juhzgm.ap-south-1.rds.amazonaws.com"
 allowedHosts: "*"
