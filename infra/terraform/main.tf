@@ -15,7 +15,6 @@ module "eks" {
   vpc_id                               = module.vpc.vpc_id
   subnet_ids                           = module.vpc.private_subnets
   environment                          = var.environment
-  region                               = var.aws_region
   cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
 }
 

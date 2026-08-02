@@ -1,7 +1,3 @@
-data "tls_certificate" "github" {
-  url = "https://token.actions.githubusercontent.com"
-}
-
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
@@ -27,14 +23,15 @@ data "aws_iam_policy_document" "github_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Only production-environment jobs may assume the provisioning role. Match
-    # both legacy and immutable GitHub OIDC subjects during GitHub's transition.
+    # Only infrastructure deployment jobs may assume the provisioning role.
+    # Match both legacy and immutable GitHub OIDC subjects during GitHub's
+    # transition.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repo}:environment:production",
-        "repo:${replace(var.github_repo, "/", "@*/")}@*:environment:production"
+        "repo:${var.github_repo}:environment:production-infrastructure",
+        "repo:${replace(var.github_repo, "/", "@*/")}@*:environment:production-infrastructure"
       ]
     }
   }

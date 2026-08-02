@@ -9,6 +9,9 @@ crash.log
 local.tfvars
 infra/terraform/environments/*.tfvars
 !*.tfvars.example
+# Child modules are validated in isolation locally, but only the root module's
+# provider lock file is used by the real Terraform runtime.
+infra/terraform/modules/**/.terraform.lock.hcl
 
 
 # Python

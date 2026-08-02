@@ -10,7 +10,7 @@ help:
 	@echo "  make kind-up              - Spin up local Kind Kubernetes cluster"
 	@echo "  make kind-down            - Destroy local Kind Kubernetes cluster"
 	@echo "  make init-state           - Initialize S3 Terraform remote state backend"
-	@echo "  make ansible-bootstrap    - Run Day 0 Ansible cluster bootstrap (ArgoCD, Kyverno, ESO, Prometheus)"
+	@echo "  make ansible-bootstrap    - Run Day 0 bootstrap and register the ArgoCD GitOps applications"
 	@echo "  make lint                 - Run pre-commit linting (gitleaks, tflint, bandit)"
 	@echo "  make scan                 - Run local Trivy scan on container image"
 
@@ -53,7 +53,7 @@ status:
 	@kubectl get service -A | awk 'NR == 1 || $$3 == "LoadBalancer"' || true
 
 ansible-bootstrap:
-	cd infra/ansible && ansible-playbook -i inventory/localhost.yml playbooks/bootstrap-cluster.yml
+	cd infra/ansible && ESO_IRSA_ROLE_ARN="$$(cd ../terraform && terraform output -raw eso_irsa_role_arn)" ansible-playbook -i inventory/localhost.yml playbooks/bootstrap-cluster.yml
 
 lint:
 	pre-commit run --all-files

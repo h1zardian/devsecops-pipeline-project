@@ -1,178 +1,233 @@
-# DevSecOps Well-Architected Platform & Provisioning Pipeline
+# Secure GitOps Platform on AWS
 
-[![CI Build](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-app.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions)
-[![SLSA Level 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
+[![Application pipeline](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-app.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-app.yml)
+[![Terraform pipeline](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-terraform.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-terraform.yml)
+[![Kubernetes validation](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-k8s-manifests.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-k8s-manifests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A production-grade, well-architected DevSecOps platform demonstrating end-to-end supply-chain security (SLSA Level 3), automated Infrastructure-as-Code (IaC) security scanning, Day 0 Ansible platform bootstrapping, Day 1+ GitOps continuous delivery via ArgoCD, Kyverno runtime admission controls, zero-trust secrets management with External Secrets Operator (ESO), and Prometheus/Grafana observability.
+This portfolio project demonstrates how I design and operate a security-first
+delivery platform, not just how I deploy an application. It provisions a
+complete AWS environment with Terraform, bootstraps Kubernetes controllers with
+Ansible, continuously delivers signed container images with GitHub Actions and
+Argo CD, enforces admission policy with Kyverno, synchronizes secrets through
+workload identity, and exposes application and platform health through
+Prometheus and Grafana.
 
----
+The sample Django workload gives the platform something realistic to build,
+scan, sign, deploy, scale, observe, and remove. The engineering focus is the
+DevSecOps system around it.
 
-## Architecture Overview
+## What this project demonstrates
+
+| Capability | Implementation | Evidence in the repository |
+| --- | --- | --- |
+| Infrastructure as Code | VPC, private subnets, NAT, EKS 1.34, managed nodes, encrypted RDS PostgreSQL, KMS, IAM, and Secrets Manager | [`infra/terraform/`](infra/terraform/) |
+| Secure CI | Secret scanning, SAST, dependency auditing, IaC scanning, manifest validation, and container CVE gates | [`.github/workflows/`](.github/workflows/) |
+| Software supply-chain security | Immutable image digests, CycloneDX SBOM, keyless Cosign signatures, GitHub OIDC identity, and build provenance | [`ci-app.yml`](.github/workflows/ci-app.yml) |
+| GitOps delivery | Automated sync, pruning, drift detection, and self-healing with an Argo CD app-of-apps model | [`k8s/argocd-apps/`](k8s/argocd-apps/) |
+| Runtime guardrails | Enforced non-root execution, resource limits, approved registry, no mutable `latest`, and signature verification | [`k8s/policies/`](k8s/policies/) |
+| Keyless cloud access | GitHub Actions OIDC for Terraform and EKS IRSA for External Secrets Operator | [`infra/terraform/modules/oidc/`](infra/terraform/modules/oidc/) |
+| Secrets lifecycle | KMS-encrypted AWS Secrets Manager values synchronized into narrowly scoped Kubernetes Secrets | [`externalsecret.yaml`](k8s/apps/django-app/templates/externalsecret.yaml) |
+| Observability | Prometheus scraping, alert rules, HPA metrics, cluster telemetry, and a provisioned Grafana dashboard | [`k8s/apps/monitoring-stack/`](k8s/apps/monitoring-stack/) |
+| Repeatable operations | Idempotent bootstrap, health checks, dynamic endpoint discovery, cloud-resource cleanup, and verified teardown | [`docs/user-guide.md`](docs/user-guide.md) |
+| Dependency maintenance | Grouped Dependabot updates across Python, Docker, Actions, and Terraform | [`.github/dependabot.yml`](.github/dependabot.yml) |
+
+## Architecture at a glance
 
 ```mermaid
-graph TD
-    subgraph "GitHub Actions — CI/CD Orchestration"
-        A1["ci-app.yml: Scan → Build → Sign → Attest → Push GHCR"]
-        A2["ci-terraform.yml: Lint → Checkov → Plan → Approve → Apply"]
-        A3["ci-k8s-manifests.yml: kubeconform + kyverno validate"]
+flowchart TB
+    subgraph GitHub[GitHub]
+        Source[Source and desired state]
+        CI[Security-gated Actions]
+        Registry[GHCR: signed images, SBOM, provenance]
     end
 
-    subgraph "Terraform — Cloud Infrastructure"
-        T1["VPC + Subnets + NAT"]
-        T2["EKS Cluster (v20+, K8s 1.34) + Hardened Nodes"]
-        T3["RDS PostgreSQL (Encrypted)"]
-        T4["GitHub OIDC Provider + IAM Roles"]
-        T5["S3 + DynamoDB (TF state backend)"]
+    subgraph AWS[AWS ap-south-1]
+        TF[Terraform]
+        VPC[VPC: public and private subnets]
+        EKS[EKS managed cluster]
+        RDS[(Encrypted RDS PostgreSQL)]
+        SM[Secrets Manager + KMS]
+
+        subgraph Kubernetes[Kubernetes platform]
+            Argo[Argo CD]
+            Policy[Kyverno]
+            ESO[External Secrets Operator]
+            App[Django workload]
+            Obs[Prometheus + Grafana]
+        end
     end
 
-    subgraph "Ansible — Day 0 Bootstrap (run once)"
-        B1["ArgoCD"]
-        B2["Kyverno"]
-        B3["External Secrets Operator"]
-        B4["kube-prometheus-stack"]
-        B5["AWS load balancers / optional Traefik + cert-manager"]
-    end
-
-    subgraph "ArgoCD — Day 1+ GitOps (continuous)"
-        G1["Django App (Helm)"]
-        G2["App of Apps Self-Management"]
-        G3["Drift Detection & Auto-Healing"]
-    end
-
-    A2 --> T1 --> T2
-    T2 --> B1
-    B1 --> G1
-
-    style A1 fill:#1a1a2e,stroke:#e94560,color:#fff
-    style A2 fill:#1a1a2e,stroke:#e94560,color:#fff
-    style A3 fill:#1a1a2e,stroke:#e94560,color:#fff
-    style T1 fill:#0f3460,stroke:#53d8fb,color:#fff
-    style T2 fill:#0f3460,stroke:#53d8fb,color:#fff
-    style T3 fill:#0f3460,stroke:#53d8fb,color:#fff
-    style T4 fill:#0f3460,stroke:#53d8fb,color:#fff
-    style T5 fill:#0f3460,stroke:#53d8fb,color:#fff
-    style B1 fill:#533483,stroke:#e94560,color:#fff
-    style B2 fill:#533483,stroke:#e94560,color:#fff
-    style B3 fill:#533483,stroke:#e94560,color:#fff
-    style B4 fill:#533483,stroke:#e94560,color:#fff
-    style B5 fill:#533483,stroke:#e94560,color:#fff
-    style G1 fill:#1a5c2e,stroke:#53d8fb,color:#fff
-    style G2 fill:#1a5c2e,stroke:#53d8fb,color:#fff
-    style G3 fill:#1a5c2e,stroke:#53d8fb,color:#fff
+    Source --> CI
+    CI --> Registry
+    CI -->|immutable digest commit| Source
+    TF --> VPC --> EKS
+    VPC --> RDS
+    EKS --> Argo
+    Source --> Argo
+    Argo --> Policy --> App
+    Registry --> App
+    SM -->|IRSA| ESO --> App
+    ESO --> Obs
+    App --> RDS
+    Obs -->|scrape and alert| App
 ```
 
----
+Terraform owns AWS resources. Ansible owns the one-time controller bootstrap.
+Argo CD owns ongoing Kubernetes desired state. Keeping those boundaries explicit
+prevents configuration drift and makes creation, recovery, and teardown
+predictable.
 
-## Key Security Features
+Read the [architecture deep dive](docs/architecture.md) for network placement,
+trust boundaries, secrets flow, reconciliation ownership, availability choices,
+and teardown boundaries.
 
-* **Supply Chain Security (SLSA Level 3)**:
-  * Secret scanning (`gitleaks`), Python SAST (`bandit`), container vulnerability scanning (`trivy`).
-  * Software Bill of Materials (`syft` CycloneDX) attached to image manifests.
-  * Keyless image and SBOM signatures (`cosign`) verified against GitHub Actions OIDC identity.
-  * Signed build attestations via `slsa-github-generator`.
-* **Zero-Trust Infrastructure & Secret Management**:
-  * AWS authentication via GitHub Actions OIDC Federation (zero static AWS keys).
-  * AWS Secrets Manager integrated with Kubernetes via External Secrets Operator (ESO).
-  * Enforced IMDSv2 (`http_tokens = required`), EBS volume encryption, and EKS secrets KMS envelope encryption.
-* **GitOps & Admission Control**:
-  * Continuous delivery powered by ArgoCD with automated drift detection and self-healing.
-  * Kyverno policy enforcement at admission: disallows `:latest` tags, enforces non-root containers, mandates resource limits, and validates Cosign keyless signatures.
-  * Safe database migrations using Helm `pre-install,pre-upgrade` hook `Job`.
-* **Observability & SRE Controls**:
-  * Application metric exposition via `django-prometheus` at `/metrics`.
-  * Prometheus `ServiceMonitor` and `PrometheusRule` alerting on error rates (>5%) and pod crashloops.
-  * Pre-configured Grafana dashboard for app latencies, request rates, and resource utilization.
+## Secure delivery flow
 
----
+An application change follows this path:
 
-## Quick Start & Deployment Guide
+1. Gitleaks scans repository history for secrets.
+2. Bandit scans Python code and pip-audit gates vulnerable dependencies.
+3. Buildah creates the image without requiring a Docker daemon.
+4. Trivy blocks fixable `HIGH` and `CRITICAL` image vulnerabilities.
+5. The image is pushed to GHCR with a commit-derived tag.
+6. Syft creates a CycloneDX SBOM, and Cosign publishes an attestation and
+   keyless signature using GitHub's OIDC identity.
+7. GitHub publishes build provenance for the immutable image digest.
+8. The workflow commits that digest to the Helm values.
+9. Argo CD reconciles the commit; Kyverno verifies the expected workflow
+   identity and digest before Kubernetes admits the pod.
 
-### Prerequisites
-* AWS CLI configured, Terraform >= 1.5, Ansible >= 2.15, Helm >= 3.12, kubectl, Docker.
+Infrastructure mutation is deliberately separate: Terraform changes are linted
+and scanned on pushes and pull requests, but `terraform apply` runs only through
+an explicit manual dispatch using the protected `production-infrastructure`
+environment and short-lived AWS credentials.
 
-### 1. Initialize State Backend
+See [pipeline flow and security gates](docs/pipeline-flow.md) for triggers,
+permissions, artifacts, trust decisions, failure semantics, and the GitOps
+handoff.
+
+## Security design highlights
+
+- No long-lived AWS access key is required by GitHub Actions or Kubernetes
+  workloads.
+- EKS Secrets are envelope-encrypted with a customer-managed KMS key; node root
+  volumes and RDS storage are encrypted.
+- EKS nodes require IMDSv2 and run in private subnets.
+- The EKS API is private by default; workstation access is limited to explicit
+  trusted CIDRs.
+- RDS accepts PostgreSQL traffic only from the VPC and has no public endpoint.
+- The Django container runs as a non-root user with a read-only root filesystem,
+  dropped capabilities, resource limits, health probes, and a constrained
+  NetworkPolicy.
+- Kyverno validates both workload shape and the keyless signing identity before
+  admission.
+- Secrets Manager access is limited to the environment path and KMS key required
+  by ESO.
+- Actions are pinned to full commit SHAs, and dependencies are monitored by
+  Dependabot and scheduled controller-image scanning.
+
+## Reliability and operability
+
+- Two EKS worker nodes span two availability zones.
+- The application starts with two replicas and can scale to five through HPA.
+- Readiness and liveness probes control traffic and recovery.
+- Argo CD automatically prunes stale resources and self-heals drift.
+- Database migrations run as a Helm lifecycle Job before the new application
+  becomes the stable desired state.
+- Prometheus discovers the application through a `ServiceMonitor`, evaluates
+  error-rate, crash-loop, and saturation alerts, and feeds a provisioned Grafana
+  dashboard.
+- `make status` summarizes nodes, GitOps health, secrets, pods, and public load
+  balancers.
+- `make down` removes Kubernetes-created load balancers and security groups
+  before Terraform destroys their VPC dependencies.
+
+## Repository map
+
+```text
+.
+├── .github/
+│   ├── workflows/             # CI, security gates, attestations, and IaC checks
+│   └── dependabot.yml         # Automated dependency update policy
+├── app/                       # Sample Django workload and hardened container build
+├── docs/
+│   ├── architecture.md        # System design and trust boundaries
+│   ├── pipeline-flow.md       # CI/CD and GitOps control flow
+│   └── user-guide.md          # Complete deploy, operate, and teardown runbook
+├── infra/
+│   ├── ansible/               # Day-0 cluster controller bootstrap
+│   ├── scripts/               # State bootstrap and AWS cleanup safeguards
+│   └── terraform/             # AWS infrastructure modules and environment inputs
+├── k8s/
+│   ├── apps/                  # Django and monitoring Helm charts
+│   ├── argocd-apps/           # App-of-apps desired state
+│   └── policies/              # Enforced Kyverno controls
+├── Makefile                   # Consistent lifecycle entry points
+└── docker-compose.yml         # Low-cost local application iteration
+```
+
+## Run it
+
+The reusable lifecycle is:
+
 ```bash
 make init-state
+# Configure the ignored dev.tfvars and fork-specific GitOps values first.
+make up
+make status
+make down
 ```
 
-### 2. Provision Infrastructure
+On a clean AWS account, Terraform must first create RDS so its generated hostname
+can be committed to the fork before Argo CD is bootstrapped. Do not run the
+abbreviated lifecycle alone for that first deployment. The
+[operator guide](docs/user-guide.md) provides the exact staged sequence plus
+prerequisites, account-specific S3 state configuration, signing-identity setup,
+EKS API access, verification, credentials, endpoint discovery, common failures,
+and permanent backend cleanup.
 
-The EKS API is private by default. Run the Ansible bootstrap from inside the
-VPC, or set `cluster_endpoint_public_access_cidrs` in your untracked
-`environments/dev.tfvars` to trusted `/32` addresses before provisioning.
+## Design tradeoffs and scope
+
+This is a deployable portfolio lab with deliberate cost and usability choices,
+not a claim of production certification:
+
+- The `dev` database is single-AZ, uses a small instance, and is destroyed
+  without a final snapshot. A production environment would use Multi-AZ,
+  deletion protection, backups, tested restore procedures, and stricter data
+  controls.
+- One NAT gateway reduces demonstration cost but is an availability dependency.
+- AWS-hostname mode creates three public load balancers and uses HTTP because an
+  AWS-generated hostname cannot receive a browser-trusted certificate. The
+  retained custom-domain mode consolidates routing behind Traefik and enables
+  Let's Encrypt TLS.
+- Public Argo CD and Grafana endpoints are convenient for a demonstration. For
+  sustained operation, use custom TLS domains, identity-aware access, network
+  restrictions, or private access.
+- The stack creates meaningful hourly AWS charges. Destroy it when it is not
+  being demonstrated, and follow the guide's post-destroy checks.
+
+These tradeoffs are documented so an evaluator can distinguish conscious
+engineering decisions from accidental omissions.
+
+## Documentation
+
+- [Operator guide: deploy, use, troubleshoot, and decommission](docs/user-guide.md)
+- [Architecture and system boundaries](docs/architecture.md)
+- [Pipeline flow and security gates](docs/pipeline-flow.md)
+- [Security reporting policy](.github/SECURITY.md)
+
+## Local application-only mode
+
+Docker Compose provides a zero-AWS-cost path for application iteration. It does
+not reproduce EKS, Kyverno, Argo CD, ESO, or the cloud trust boundaries.
 
 ```bash
-make cluster-up
+make dev-up
+curl http://localhost:8000/
+make dev-down
 ```
 
-### 3. Bootstrap Day 0 Platform Controllers
-```bash
-aws eks update-kubeconfig \
-  --name "$(cd infra/terraform && terraform output -raw eks_cluster_name)" \
-  --region ap-south-1
-make ansible-bootstrap
-```
+## License
 
-### 4. Continuous GitOps Delivery
-ArgoCD automatically detects changes in `k8s/apps/django-app/values.yaml` and deploys the application.
-
-### 5. Access the Public Endpoints
-
-By default, Kubernetes provisions three internet-facing AWS load balancers.
-Wait until their AWS-generated hostnames appear:
-
-```bash
-kubectl get service -A | awk 'NR == 1 || $3 == "LoadBalancer"'
-```
-
-Open the endpoints over HTTP (the app service listens on port `8000`):
-
-```bash
-echo "App:     http://$(kubectl get service django-app -n django -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):8000"
-echo "Argo CD: http://$(kubectl get service argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
-echo "Grafana: http://$(kubectl get service monitoring-stack-grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
-```
-
-Retrieve Argo CD's initial `admin` password with:
-
-```bash
-kubectl get secret argocd-initial-admin-secret -n argocd \
-  -o jsonpath='{.data.password}' | base64 --decode
-```
-
-AWS does not issue a browser-trusted certificate for an AWS-generated load
-balancer hostname. These default endpoints therefore use HTTP. Grafana's
-generated admin password remains in AWS Secrets Manager and is synchronized by
-External Secrets Operator:
-
-```bash
-kubectl get secret grafana-admin-credentials -n monitoring \
-  -o jsonpath='{.data.admin-password}' | base64 --decode
-```
-
-### Optional custom domains and HTTPS
-
-The Traefik and cert-manager setup remains available. To switch modes:
-
-1. In `k8s/apps/django-app/values.yaml`, set `service.type: ClusterIP`, set
-   `ingress.enabled: true`, and replace `ingress.host` with the app domain.
-2. In `k8s/apps/monitoring-stack/values.yaml`, set Grafana's service type to
-   `ClusterIP`, enable its ingress, and replace both Grafana host entries.
-3. Bootstrap with the Argo CD domain and optional controllers enabled:
-
-   ```bash
-   cd infra/ansible
-   ansible-playbook -i inventory/localhost.yml playbooks/bootstrap-cluster.yml \
-     --extra-vars 'custom_domain_enabled=true argocd_domain=argocd.example.com admin_email=admin@example.com'
-   ```
-
-4. Point each DNS record at the Traefik service hostname. cert-manager will
-   request the configured Let's Encrypt certificates after DNS resolves.
-
----
-
-## Cost Optimization
-* **On-Demand AWS Spend**: Use `make cluster-down` to destroy infrastructure when not demonstrating or testing (~$150/month active vs <$10/month on-demand).
-* **Endpoint Tradeoff**: AWS-hostname mode creates three load balancers. Custom-domain mode consolidates the endpoints behind the single optional Traefik load balancer.
-* **Zero-Cost Local Iteration**: Run `make dev-up` to launch local Docker Compose stack for offline development.
+Released under the [MIT License](LICENSE).
