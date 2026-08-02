@@ -3,6 +3,7 @@
   kubernetes.core.helm_repository:
     name: argo
     repo_url: https://argoproj.github.io/argo-helm
+    force_update: true
 
 - name: Create argocd namespace
   kubernetes.core.k8s:
