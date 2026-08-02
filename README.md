@@ -5,17 +5,17 @@
 [![Kubernetes validation](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-k8s-manifests.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-k8s-manifests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This portfolio project demonstrates how I design and operate a security-first
-delivery platform, not just how I deploy an application. It provisions a
-complete AWS environment with Terraform, bootstraps Kubernetes controllers with
-Ansible, continuously delivers signed container images with GitHub Actions and
-Argo CD, enforces admission policy with Kyverno, synchronizes secrets through
-workload identity, and exposes application and platform health through
-Prometheus and Grafana.
+This portfolio project demonstrates a security-first delivery platform I
+designed, deployed, operated, and cleanly decommissioned—not merely an
+application deployment. It provisions a complete AWS environment with
+Terraform, bootstraps Kubernetes controllers with Ansible, continuously delivers
+signed container images with GitHub Actions and Argo CD, enforces admission
+policy with Kyverno, synchronizes secrets through workload identity, and exposes
+application and platform health through Prometheus and Grafana.
 
 The sample Django workload gives the platform something realistic to build,
-scan, sign, deploy, scale, observe, and remove. The engineering focus is the
-DevSecOps system around it.
+scan, test, sign, deploy, scale, observe, and remove. The engineering focus is
+the DevSecOps system around it.
 
 ## What this project demonstrates
 
@@ -82,20 +82,33 @@ Read the [architecture deep dive](docs/architecture.md) for network placement,
 trust boundaries, secrets flow, reconciliation ownership, availability choices,
 and teardown boundaries.
 
+## Demonstration evidence
+
+The panels below are intentionally labeled placeholders until sanitized captures
+from the next short-lived deployment replace the files. Replacement instructions
+and the exact filenames are in [`docs/images/`](docs/images/README.md).
+
+| Public application | Argo CD reconciliation |
+| --- | --- |
+| ![Placeholder for the live Django application endpoint](docs/images/app-endpoint.png) | ![Placeholder for healthy Argo CD applications](docs/images/argocd-applications.png) |
+| **Grafana observability** | **GitHub Actions delivery** |
+| ![Placeholder for the provisioned Grafana dashboard](docs/images/grafana-dashboard.png) | ![Placeholder for successful GitHub Actions workflows](docs/images/github-actions.png) |
+
 ## Secure delivery flow
 
 An application change follows this path:
 
 1. Gitleaks scans repository history for secrets.
-2. Bandit scans Python code and pip-audit gates vulnerable dependencies.
-3. Buildah creates the image without requiring a Docker daemon.
-4. Trivy blocks fixable `HIGH` and `CRITICAL` image vulnerabilities.
-5. The image is pushed to GHCR with a commit-derived tag.
-6. Syft creates a CycloneDX SBOM, and Cosign publishes an attestation and
+2. Django smoke tests verify the public application and health endpoints.
+3. Bandit scans Python code and pip-audit gates vulnerable dependencies.
+4. Buildah creates the image without requiring a Docker daemon.
+5. Trivy blocks fixable `HIGH` and `CRITICAL` image vulnerabilities.
+6. The image is pushed to GHCR with a commit-derived tag.
+7. Syft creates a CycloneDX SBOM, and Cosign publishes an attestation and
    keyless signature using GitHub's OIDC identity.
-7. GitHub publishes build provenance for the immutable image digest.
-8. The workflow commits that digest to the Helm values.
-9. Argo CD reconciles the commit; Kyverno verifies the expected workflow
+8. GitHub publishes build provenance for the immutable image digest.
+9. The workflow commits that digest to the Helm values.
+10. Argo CD reconciles the commit; Kyverno verifies the expected workflow
    identity and digest before Kubernetes admits the pod.
 
 Infrastructure mutation is deliberately separate: Terraform changes are linted
@@ -126,6 +139,9 @@ handoff.
   by ESO.
 - Actions are pinned to full commit SHAs, and dependencies are monitored by
   Dependabot and scheduled controller-image scanning.
+- Upstream controller-image findings remain visible and blocking without blanket
+  suppression; ownership and the next review date are tracked in
+  [security issue #15](https://github.com/h1zardian/devsecops-pipeline-project/issues/15).
 
 ## Reliability and operability
 
@@ -153,6 +169,7 @@ handoff.
 ├── app/                       # Sample Django workload and hardened container build
 ├── docs/
 │   ├── architecture.md        # System design and trust boundaries
+│   ├── images/                # Replaceable demonstration evidence
 │   ├── pipeline-flow.md       # CI/CD and GitOps control flow
 │   └── user-guide.md          # Complete deploy, operate, and teardown runbook
 ├── infra/
@@ -182,7 +199,7 @@ make down
 On a clean AWS account, Terraform must first create RDS so its generated hostname
 can be committed to the fork before Argo CD is bootstrapped. Do not run the
 abbreviated lifecycle alone for that first deployment. The
-[operator guide](docs/user-guide.md) provides the exact staged sequence plus
+[user guide](docs/user-guide.md) provides the exact staged sequence plus
 prerequisites, account-specific S3 state configuration, signing-identity setup,
 EKS API access, verification, credentials, endpoint discovery, common failures,
 and permanent backend cleanup.
@@ -212,7 +229,7 @@ engineering decisions from accidental omissions.
 
 ## Documentation
 
-- [Operator guide: deploy, use, troubleshoot, and decommission](docs/user-guide.md)
+- [User guide: deploy, use, troubleshoot, and decommission](docs/user-guide.md)
 - [Architecture and system boundaries](docs/architecture.md)
 - [Pipeline flow and security gates](docs/pipeline-flow.md)
 - [Security reporting policy](.github/SECURITY.md)

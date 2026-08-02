@@ -564,7 +564,8 @@ Then check the account's load balancers and quota in `ap-south-1`.
 ### Application changes
 
 1. Create a branch and change files under `app/`.
-2. Open a pull request and wait for the application security gates.
+2. Open a pull request and wait for the application tests, security gates,
+   container scan, Kubernetes validation, and Terraform validation.
 3. Merge to `main`.
 4. The pipeline scans, builds, pushes, signs, and attests the image.
 5. The pipeline bot updates the Helm values with the tag and immutable digest.
@@ -584,8 +585,9 @@ health checks.
 
 ### Kubernetes and platform configuration changes
 
-Make desired-state changes under `k8s/`, allow the manifest and policy workflow
-to pass, and merge them. Argo CD applies the committed state. Avoid using
+Make desired-state changes under `k8s/`, open a pull request, and allow every
+required repository check to pass before merging. Argo CD applies the committed
+state. Avoid using
 `kubectl edit` for lasting changes because Argo CD self-healing will revert
 uncommitted drift.
 
@@ -599,8 +601,8 @@ make ansible-bootstrap
 
 ### Infrastructure changes
 
-Change Terraform through a pull request and require the Terraform validation
-workflow to pass. Apply locally with `make up` while the fork's
+Change Terraform through a pull request and require every repository check,
+including Terraform validation, to pass. Apply locally with `make up` while the fork's
 `GIT_REPO_URL` is exported, or manually dispatch the Terraform workflow after
 its environment and OIDC secrets are configured. Always inspect the Terraform
 plan before approving a material change.

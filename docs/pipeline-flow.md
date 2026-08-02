@@ -1,6 +1,6 @@
 # Delivery Pipelines and Security Gates
 
-[Project overview](../README.md) · [Architecture](architecture.md) · [Operator guide](user-guide.md)
+[Project overview](../README.md) · [Architecture](architecture.md) · [User guide](user-guide.md)
 
 This document explains what starts each automation path, which trust decision it
 makes, what it is allowed to change, and how a successful container becomes a
@@ -11,9 +11,9 @@ not silently gain deployment permission.
 
 | Workflow | Trigger | Primary gates | May mutate external state? |
 | --- | --- | --- | --- |
-| `App CI/CD Pipeline` | Push to `main` affecting `app/` or its workflow; pull request affecting `app/` | Gitleaks, Bandit, pip-audit, Trivy, signing, SBOM and provenance publication | On `main`: writes GHCR and commits the immutable digest to Git |
-| `Terraform Infrastructure CI/CD` | Terraform/workflow push or pull request; manual dispatch | TFLint, Checkov, init, validate; plan during manual apply | Only the manually dispatched `main` job can assume the AWS role and apply |
-| `Kubernetes Manifests & Policy CI` | Kubernetes/workflow push or pull request | Helm lint/render, kubeconform, Kyverno CLI tests, Checkov | No; validation only |
+| `App CI/CD Pipeline` | Push to `main` affecting `app/` or its workflow; every pull request | Gitleaks, Django smoke tests, Bandit, pip-audit, Trivy, signing, SBOM and provenance publication | On `main`: writes GHCR and commits the immutable digest to Git |
+| `Terraform Infrastructure CI/CD` | Terraform/workflow push; every pull request; manual dispatch | TFLint, Checkov, init, validate; plan during manual apply | Only the manually dispatched `main` job can assume the AWS role and apply |
+| `Kubernetes Manifests & Policy CI` | Kubernetes/workflow push; every pull request | Helm lint/render, kubeconform, Kyverno CLI tests, Checkov | No; validation only |
 | `Platform Controller Image CVE Scan` | Weekly schedule, manual dispatch, or pinned platform-version change | Trivy fixable `HIGH`/`CRITICAL` scan | No; reports risk only |
 | Dependabot | Weekly by ecosystem | Opens grouped or scoped update pull requests | Pull requests only; normal branch controls still apply |
 
@@ -26,7 +26,8 @@ attestations, Git commits, or AWS mutations.
 ```mermaid
 flowchart LR
     Change[Change under app/] --> Secrets[Gitleaks]
-    Secrets --> SAST[Bandit]
+    Secrets --> Tests[Django endpoint tests]
+    Tests --> SAST[Bandit]
     SAST --> Dependencies[pip-audit]
     Dependencies --> Build[Buildah image build]
     Build --> CVE[Trivy HIGH/CRITICAL gate]
@@ -48,7 +49,9 @@ The `security-scans` job checks out full history so Gitleaks can inspect more
 than the final snapshot. It then:
 
 - Scans for secrets with Gitleaks.
-- Installs Python 3.12 for analysis tools.
+- Installs Python 3.12 and the locked application dependencies.
+- Runs isolated smoke tests for the public landing page and health endpoint
+  against SQLite; the tests do not require AWS or a running PostgreSQL service.
 - Runs Bandit recursively against the application, with the settings module
   excluded by the repository's explicit configuration.
 - Runs `pip-audit --strict` against the locked application requirements.
@@ -265,6 +268,7 @@ Ansible or Helm remain explicit operator-reviewed changes.
 
 | Failure | What it means | First investigation point |
 | --- | --- | --- |
+| Django tests | A public application contract regressed | Test name, response status, and traceback |
 | Gitleaks/Bandit/pip-audit | Source or dependency gate rejected the change | Failed step logs and exact finding |
 | Trivy application scan | Built runtime image has a gated fixable CVE | Package, fixed version, and base image |
 | Cosign or attestation | Identity, registry permission, or publication failure | OIDC permissions and GHCR package access |

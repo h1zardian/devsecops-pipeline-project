@@ -8,8 +8,6 @@ on:
       - '.github/workflows/ci-app.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'app/**'
 
 permissions:
   contents: read
@@ -20,7 +18,7 @@ env:
 
 jobs:
   security-scans:
-    name: Security Scans (Gitleaks + Bandit)
+    name: Security & Test Gates
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,6 +36,16 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.12'
+
+      - name: Install Application Dependencies
+        run: python -m pip install --disable-pip-version-check --requirement app/requirements.txt
+
+      - name: Django Smoke Tests
+        working-directory: app
+        env:
+          SQL_ENGINE: django.db.backends.sqlite3
+          POSTGRES_DB: /tmp/devsecops-test.sqlite3
+        run: python manage.py test hospital.tests --verbosity 2
 
       - name: Bandit SAST Scan
         run: |

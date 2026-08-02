@@ -9,8 +9,6 @@ on:
       - '.github/workflows/ci-terraform.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'infra/terraform/**'
 
 permissions:
   contents: read

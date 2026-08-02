@@ -64,7 +64,7 @@ tools compete for the same object.
 | Terraform | VPC, subnets, routes, NAT/EIP, EKS, nodes, RDS, KMS, Secrets Manager, IAM, OIDC, and remote-state references | Helm releases and application rollouts |
 | Ansible | Initial Helm installation of Argo CD, Kyverno, and ESO; optional Traefik/cert-manager; initial Argo CD Application objects | Day-1 application image promotion |
 | Argo CD | Django chart, monitoring chart, Kyverno policies, ClusterSecretStore, metrics server, pruning, and drift reconciliation | AWS infrastructure |
-| GitHub Actions | Validation, image build, CVE gate, signing, attestations, and the desired image-digest commit | Direct Kubernetes mutation |
+| GitHub Actions | Application tests, validation, image build, CVE gate, signing, attestations, and the desired image-digest commit | Direct Kubernetes mutation |
 | Kubernetes controllers | Scheduling, rollout, HPA, load-balancer provisioning, secret synchronization, admission, and monitoring reconciliation | Source-of-truth changes |
 
 Terraform is run before Ansible because the bootstrap requires a reachable EKS

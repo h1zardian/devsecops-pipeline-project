@@ -8,8 +8,6 @@ on:
       - '.github/workflows/ci-k8s-manifests.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'k8s/**'
 
 jobs:
   validate-manifests:
