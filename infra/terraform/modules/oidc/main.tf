@@ -7,7 +7,8 @@ resource "aws_iam_openid_connect_provider" "github" {
   client_id_list = ["sts.amazonaws.com"]
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1",
-    "1c58a21860c07ebb1496735510619a97eb943615"
+    "1c58a21860c07ebb1496735510619a97eb943615",
+    "1b51906f92d9921b1c6e694086603a110f8427af"
   ]
 }
 
