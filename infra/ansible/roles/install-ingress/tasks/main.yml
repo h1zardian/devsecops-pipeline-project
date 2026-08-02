@@ -19,6 +19,9 @@
     chart_version: "{{ ingress_chart_version }}"
     release_namespace: "{{ ingress_namespace }}"
     values:
+      # The chart's appVersion currently lags the patched upstream release.
+      image:
+        tag: v3.7.10
       ingressClass:
         enabled: true
         isDefaultClass: false
