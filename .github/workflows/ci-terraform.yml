@@ -56,6 +56,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ap-south-1
+          audience: sts.amazonaws.com
 
       - name: Terraform Init & Plan
         env:
@@ -100,6 +101,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ap-south-1
+          audience: sts.amazonaws.com
 
       - name: Terraform Apply
         env:
