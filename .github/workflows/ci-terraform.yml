@@ -60,7 +60,9 @@ jobs:
     # pull requests still run validation, but cannot mutate AWS automatically.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production
+    # Keep infrastructure deployment status separate from the application
+    # status shown for the production workload.
+    environment: production-infrastructure
     permissions:
       id-token: write
       contents: read

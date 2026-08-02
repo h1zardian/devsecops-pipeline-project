@@ -163,6 +163,9 @@ jobs:
     needs: [build-scan-push, provenance]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Publish the GitOps handoff as the application deployment. This keeps the
+    # Deployments view aligned with the workload instead of Terraform applies.
+    environment: production
     permissions:
       contents: write
     steps:
