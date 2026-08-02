@@ -86,9 +86,9 @@ and teardown boundaries.
 
 ## Demonstration evidence
 
-The panels below are intentionally labeled placeholders until sanitized captures
-from the next short-lived deployment replace the files. Replacement instructions
-and the exact filenames are in [`docs/images/`](docs/images/README.md).
+The panels below are sanitized captures from the verified AWS deployment. They
+show the public workload, GitOps reconciliation, provisioned observability, and
+the security-gated application delivery workflow without exposing credentials.
 
 | Public application | Argo CD reconciliation |
 | --- | --- |
