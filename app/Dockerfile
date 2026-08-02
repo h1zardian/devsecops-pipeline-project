@@ -47,8 +47,14 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
 
-# Install dependencies
-RUN pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" "wheel>=0.46.2" "jaraco.context>=6.1.0" && pip install --no-cache /wheels/*
+# Install application wheels, then re-assert security-sensitive build/runtime
+# packages so transitive metadata cannot downgrade the patched versions.
+RUN pip install --no-cache-dir /wheels/* && \
+    pip install --no-cache-dir --upgrade pip \
+      "msgpack==1.2.1" \
+      "setuptools>=78.1.1" \
+      "wheel>=0.46.2" \
+      "jaraco.context>=6.1.0"
 
 # Copy the entrypoint.sh script (if you have one)
 COPY --chown=app:app ./entrypoint.sh /home/app/web
