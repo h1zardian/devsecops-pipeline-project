@@ -41,47 +41,164 @@ resource "aws_iam_role" "github_actions" {
   assume_role_policy = data.aws_iam_policy_document.github_assume_role.json
 }
 
-# Least-privilege IAM policy document for Terraform infrastructure provisioning
-# Note: Resources are set to "*" for dynamic infrastructure creation; in strict enterprise environments,
-# scope resources to specific ARNs (e.g. arn:aws:eks:us-east-1:123456789012:cluster/devsecops-*).
+# IAM policy for Terraform CI/CD runner via GitHub OIDC
+# Uses wildcard read patterns (Describe*, Get*, List*) since terraform plan
+# must refresh state for ALL managed resources. Write actions are explicit.
 data "aws_iam_policy_document" "terraform_provisioner" {
+
+  # --- Read-only access for terraform plan state refresh ---
   statement {
-    sid    = "VPCAndNetworkingPermissions"
+    sid    = "EC2ReadAccess"
     effect = "Allow"
     actions = [
-      "ec2:CreateVpc", "ec2:DeleteVpc", "ec2:DescribeVpcs", "ec2:ModifyVpcAttribute",
-      "ec2:CreateSubnet", "ec2:DeleteSubnet", "ec2:DescribeSubnets", "ec2:ModifySubnetAttribute",
-      "ec2:CreateInternetGateway", "ec2:DeleteInternetGateway", "ec2:AttachInternetGateway", "ec2:DetachInternetGateway",
-      "ec2:CreateRouteTable", "ec2:DeleteRouteTable", "ec2:CreateRoute", "ec2:DeleteRoute",
-      "ec2:AssociateRouteTable", "ec2:DisassociateRouteTable", "ec2:DescribeRouteTables",
-      "ec2:CreateSecurityGroup", "ec2:DeleteSecurityGroup", "ec2:AuthorizeSecurityGroupIngress",
-      "ec2:AuthorizeSecurityGroupEgress", "ec2:RevokeSecurityGroupIngress", "ec2:RevokeSecurityGroupEgress",
-      "ec2:DescribeSecurityGroups", "ec2:CreateNatGateway", "ec2:DeleteNatGateway", "ec2:DescribeNatGateways",
-      "ec2:AllocateAddress", "ec2:ReleaseAddress", "ec2:DescribeAddresses"
+      "ec2:Describe*",
     ]
     resources = ["*"]
   }
 
   statement {
-    sid    = "EKSPermissions"
+    sid    = "IAMReadAccess"
     effect = "Allow"
     actions = [
-      "eks:*",
-      "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:ListRoles",
-      "iam:PassRole", "iam:AttachRolePolicy", "iam:DetachRolePolicy",
-      "iam:CreatePolicy", "iam:DeletePolicy", "iam:GetPolicy", "iam:ListPolicyVersions",
-      "kms:CreateKey", "kms:DescribeKey", "kms:CreateAlias", "kms:DeleteAlias",
-      "kms:GetKeyPolicy", "kms:PutKeyPolicy"
+      "iam:Get*",
+      "iam:List*",
     ]
     resources = ["*"]
   }
 
   statement {
-    sid    = "RDSPermissions"
+    sid    = "EKSReadAccess"
     effect = "Allow"
     actions = [
-      "rds:CreateDBInstance", "rds:DeleteDBInstance", "rds:DescribeDBInstances", "rds:ModifyDBInstance",
-      "rds:CreateDBSubnetGroup", "rds:DeleteDBSubnetGroup", "rds:DescribeDBSubnetGroups"
+      "eks:Describe*",
+      "eks:List*",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "OtherReadAccess"
+    effect = "Allow"
+    actions = [
+      "rds:Describe*",
+      "rds:ListTagsForResource",
+      "kms:Describe*",
+      "kms:Get*",
+      "kms:List*",
+      "logs:Describe*",
+      "logs:List*",
+      "secretsmanager:Describe*",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:ListSecretVersionIds",
+      "sts:GetCallerIdentity",
+    ]
+    resources = ["*"]
+  }
+
+  # --- Write access for terraform apply ---
+  statement {
+    sid    = "EC2WriteAccess"
+    effect = "Allow"
+    actions = [
+      "ec2:CreateVpc", "ec2:DeleteVpc", "ec2:ModifyVpcAttribute",
+      "ec2:CreateSubnet", "ec2:DeleteSubnet", "ec2:ModifySubnetAttribute",
+      "ec2:CreateInternetGateway", "ec2:DeleteInternetGateway",
+      "ec2:AttachInternetGateway", "ec2:DetachInternetGateway",
+      "ec2:CreateRouteTable", "ec2:DeleteRouteTable",
+      "ec2:CreateRoute", "ec2:DeleteRoute",
+      "ec2:AssociateRouteTable", "ec2:DisassociateRouteTable",
+      "ec2:CreateSecurityGroup", "ec2:DeleteSecurityGroup",
+      "ec2:AuthorizeSecurityGroupIngress", "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupIngress", "ec2:RevokeSecurityGroupEgress",
+      "ec2:CreateNatGateway", "ec2:DeleteNatGateway",
+      "ec2:AllocateAddress", "ec2:ReleaseAddress",
+      "ec2:CreateTags", "ec2:DeleteTags",
+      "ec2:CreateLaunchTemplate", "ec2:DeleteLaunchTemplate",
+      "ec2:CreateLaunchTemplateVersion",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "EKSWriteAccess"
+    effect = "Allow"
+    actions = [
+      "eks:Create*",
+      "eks:Delete*",
+      "eks:Update*",
+      "eks:TagResource",
+      "eks:UntagResource",
+      "eks:AssociateAccessPolicy",
+      "eks:DisassociateAccessPolicy",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "IAMWriteAccess"
+    effect = "Allow"
+    actions = [
+      "iam:CreateRole", "iam:DeleteRole", "iam:UpdateRole",
+      "iam:UpdateAssumeRolePolicy",
+      "iam:PassRole",
+      "iam:AttachRolePolicy", "iam:DetachRolePolicy",
+      "iam:PutRolePolicy", "iam:DeleteRolePolicy",
+      "iam:CreatePolicy", "iam:DeletePolicy", "iam:CreatePolicyVersion", "iam:DeletePolicyVersion",
+      "iam:CreateOpenIDConnectProvider", "iam:DeleteOpenIDConnectProvider",
+      "iam:UpdateOpenIDConnectProviderThumbprint", "iam:AddClientIDToOpenIDConnectProvider",
+      "iam:RemoveClientIDFromOpenIDConnectProvider",
+      "iam:CreateInstanceProfile", "iam:DeleteInstanceProfile",
+      "iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile",
+      "iam:TagRole", "iam:UntagRole", "iam:TagPolicy", "iam:UntagPolicy",
+      "iam:TagOpenIDConnectProvider", "iam:UntagOpenIDConnectProvider",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "RDSWriteAccess"
+    effect = "Allow"
+    actions = [
+      "rds:CreateDBInstance", "rds:DeleteDBInstance", "rds:ModifyDBInstance",
+      "rds:CreateDBSubnetGroup", "rds:DeleteDBSubnetGroup",
+      "rds:AddTagsToResource", "rds:RemoveTagsFromResource",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "KMSWriteAccess"
+    effect = "Allow"
+    actions = [
+      "kms:CreateKey", "kms:ScheduleKeyDeletion",
+      "kms:CreateAlias", "kms:DeleteAlias",
+      "kms:PutKeyPolicy",
+      "kms:TagResource", "kms:UntagResource",
+      "kms:EnableKeyRotation",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "SecretsManagerWriteAccess"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:CreateSecret", "secretsmanager:DeleteSecret",
+      "secretsmanager:PutSecretValue", "secretsmanager:UpdateSecret",
+      "secretsmanager:TagResource", "secretsmanager:UntagResource",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "CloudWatchLogsAccess"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup", "logs:DeleteLogGroup",
+      "logs:PutRetentionPolicy", "logs:DeleteRetentionPolicy",
+      "logs:TagLogGroup", "logs:UntagLogGroup",
+      "logs:TagResource", "logs:UntagResource",
     ]
     resources = ["*"]
   }
@@ -91,18 +208,7 @@ data "aws_iam_policy_document" "terraform_provisioner" {
     effect = "Allow"
     actions = [
       "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket",
-      "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"
-    ]
-    resources = ["*"]
-  }
-
-  statement {
-    sid    = "SecretsManagerPermissions"
-    effect = "Allow"
-    actions = [
-      "secretsmanager:CreateSecret", "secretsmanager:DeleteSecret",
-      "secretsmanager:DescribeSecret", "secretsmanager:GetSecretValue",
-      "secretsmanager:PutSecretValue", "secretsmanager:TagResource"
+      "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem",
     ]
     resources = ["*"]
   }
