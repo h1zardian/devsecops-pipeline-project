@@ -3,7 +3,8 @@
 [![Application pipeline](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-app.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-app.yml)
 [![Terraform pipeline](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-terraform.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-terraform.yml)
 [![Kubernetes validation](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-k8s-manifests.yml/badge.svg)](https://github.com/h1zardian/devsecops-pipeline-project/actions/workflows/ci-k8s-manifests.yml)
-[![SLSA aligned](https://img.shields.io/badge/SLSA-aligned-blue.svg)](docs/pipeline-flow.md#stage-4-sbom-signature-and-provenance)
+
+[![SLSA aligned](docs/images/slsa-aligned.svg)](docs/pipeline-flow.md#stage-4-sbom-signature-and-provenance)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 This portfolio project demonstrates a security-first delivery platform I
