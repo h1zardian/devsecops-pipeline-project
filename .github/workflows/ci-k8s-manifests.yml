@@ -47,7 +47,7 @@ jobs:
 
       - name: Kyverno Policy Test & Apply Dry-Run
         run: |
-          kyverno apply k8s/policies/require-non-root.yaml k8s/policies/require-resource-limits.yaml k8s/policies/disallow-latest-tag.yaml --resource .github/fixtures/django-policy-pod.yaml --warn-no-pass --warn-exit-code 1
+          kyverno apply k8s/policies/require-non-root.yaml k8s/policies/require-resource-limits.yaml k8s/policies/disallow-latest-tag.yaml k8s/policies/restrict-image-repository.yaml --resource .github/fixtures/django-policy-pod.yaml --warn-no-pass --warn-exit-code 1
           kyverno apply k8s/policies/require-image-signature.yaml --resource .github/fixtures/django-policy-pod.yaml --registry --warn-no-pass --warn-exit-code 1
 
       - name: Checkov Kubernetes Scan

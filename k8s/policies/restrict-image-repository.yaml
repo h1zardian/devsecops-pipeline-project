@@ -1,0 +1,33 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-repository
+  annotations:
+    policies.kyverno.io/title: Restrict Application Image Repository
+    policies.kyverno.io/category: Supply Chain Security
+spec:
+  admission: true
+  validationFailureAction: Enforce
+  background: true
+  emitWarning: false
+  rules:
+    - name: require-project-repository
+      skipBackgroundRequests: true
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [django]
+      validate:
+        allowExistingViolations: true
+        message: "Every container must use the approved project image repository."
+        foreach:
+          - list: request.object.spec.containers
+            pattern:
+              image: "ghcr.io/h1zardian/devsecops-pipeline-project*"
+          - list: request.object.spec.initContainers || `[]`
+            pattern:
+              image: "ghcr.io/h1zardian/devsecops-pipeline-project*"
+          - list: request.object.spec.ephemeralContainers || `[]`
+            pattern:
+              image: "ghcr.io/h1zardian/devsecops-pipeline-project*"
