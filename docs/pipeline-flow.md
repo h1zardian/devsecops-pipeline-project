@@ -11,7 +11,7 @@ not silently gain deployment permission.
 
 | Workflow | Trigger | Primary gates | May mutate external state? |
 | --- | --- | --- | --- |
-| `App CI/CD Pipeline` | Push to `main` affecting `app/` or its workflow; every pull request | Gitleaks, Django smoke tests, Bandit, pip-audit, Trivy, signing, SBOM and provenance publication | On `main`: writes GHCR and commits the immutable digest to Git |
+| `App CI/CD Pipeline` | Push to `main` affecting `app/` or its workflow; every pull request; manual dispatch | Gitleaks, Django smoke tests, Bandit, pip-audit, Trivy, signing, SBOM and provenance publication | On `main`: writes GHCR and commits the immutable digest to Git |
 | `Terraform Infrastructure CI/CD` | Terraform/workflow push; every pull request; manual dispatch | TFLint, Checkov, init, validate; plan during manual apply | Only the manually dispatched `main` job can assume the AWS role and apply |
 | `Kubernetes Manifests & Policy CI` | Kubernetes/workflow push; every pull request | Helm lint/render, kubeconform, Kyverno CLI tests, Checkov | No; validation only |
 | `Platform Controller Image CVE Scan` | Weekly schedule, manual dispatch, or pinned platform-version change | Trivy fixable `HIGH`/`CRITICAL` scan | No; reports risk only |
@@ -36,10 +36,10 @@ The application, Kubernetes, and Terraform validation workflows therefore run
 on every pull request, even when their push triggers remain path-scoped. The
 ruleset also blocks branch deletion and force pushes.
 
-The GitHub Actions integration is the sole always-on bypass actor. It is needed
-because the already-gated application workflow writes the immutable image digest
-directly to the Helm values on `main`. That job has only `contents: write`; human
-contributors do not inherit the bypass.
+The `github-actions[bot]` account is the sole always-on bypass actor. It is
+needed because the already-gated application workflow writes the immutable image
+digest directly to the Helm values on `main`. That job has only
+`contents: write`; human contributors do not inherit the bypass.
 
 ## Application pipeline
 
