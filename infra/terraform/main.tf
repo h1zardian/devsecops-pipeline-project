@@ -34,4 +34,5 @@ module "oidc" {
   environment           = var.environment
   eks_oidc_provider_arn = module.eks.oidc_provider_arn
   eks_oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
+  secrets_kms_key_arn   = module.rds.kms_key_arn
 }

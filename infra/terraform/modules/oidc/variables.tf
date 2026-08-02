@@ -19,3 +19,8 @@ variable "eks_oidc_issuer_url" {
   type        = string
   default     = ""
 }
+
+variable "secrets_kms_key_arn" {
+  description = "KMS key ARN used by Secrets Manager for application secrets"
+  type        = string
+}

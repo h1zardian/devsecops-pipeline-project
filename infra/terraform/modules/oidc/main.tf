@@ -248,6 +248,13 @@ data "aws_iam_policy_document" "eso_secrets_manager" {
       "arn:aws:secretsmanager:*:*:secret:${var.environment}/*"
     ]
   }
+
+  statement {
+    sid       = "DecryptApplicationSecrets"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = [var.secrets_kms_key_arn]
+  }
 }
 
 resource "aws_iam_policy" "eso_secrets_manager" {
