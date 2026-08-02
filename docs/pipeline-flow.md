@@ -36,10 +36,12 @@ The application, Kubernetes, and Terraform validation workflows therefore run
 on every pull request, even when their push triggers remain path-scoped. The
 ruleset also blocks branch deletion and force pushes.
 
-The `github-actions[bot]` account is the sole always-on bypass actor. It is
-needed because the already-gated application workflow writes the immutable image
-digest directly to the Helm values on `main`. That job has only
-`contents: write`; human contributors do not inherit the bypass.
+A dedicated, write-enabled deploy key for this repository is the sole always-on
+bypass actor. It is needed because the already-gated application workflow writes
+the immutable image digest directly to the Helm values on `main`. The private
+key exists only as the `GITOPS_DEPLOY_KEY` Actions secret, while the job's
+`GITHUB_TOKEN` remains read-only. The key cannot access AWS or any other
+repository, and human contributors do not inherit the bypass.
 
 ## Application pipeline
 
@@ -119,7 +121,8 @@ formal SLSA certification level.
 
 ### Stage 5: GitOps promotion
 
-The final job has only `contents: write`. It updates three Helm values:
+The final job has a read-only `GITHUB_TOKEN` plus the repository-scoped GitOps
+deploy key. It updates three Helm values:
 
 - Image repository.
 - Human-readable commit tag.
@@ -277,7 +280,7 @@ Ansible or Helm remain explicit operator-reviewed changes.
 | App scan | Read-only `GITHUB_TOKEN` | Checkout and secret scanning |
 | Image publication | Scoped `GITHUB_TOKEN` plus GitHub OIDC | Write GHCR, sign, and attest |
 | Provenance | GitHub OIDC and attestation permission | Publish digest-bound provenance |
-| GitOps update | `GITHUB_TOKEN` with contents write | Update one desired-state file |
+| GitOps update | Repository-scoped write deploy key | Update one desired-state file and bypass only the `main` ruleset |
 | Terraform validation | No AWS credential | Static checks and local validation |
 | Terraform apply | GitHub environment OIDC | Assume scoped AWS provisioning role |
 | Argo CD | In-cluster service account | Reconcile declared Kubernetes resources |

@@ -176,11 +176,14 @@ jobs:
     # Deployments view aligned with the workload instead of Terraform applies.
     environment: production
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # A single-repository deploy key is the only ruleset bypass actor.
+          # Forks without branch protection fall back to GITHUB_TOKEN when this
+          # optional secret is unset.
+          ssh-key: ${{ secrets.GITOPS_DEPLOY_KEY }}
 
       - name: Update Helm Image Repository & Tag
         run: |

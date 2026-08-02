@@ -366,6 +366,31 @@ gh secret set DB_PASSWORD --env production-infrastructure
 The workflow validates Terraform on relevant pushes. AWS mutation occurs only
 after manually dispatching `Terraform Infrastructure CI/CD` from `main`.
 
+### 5.6 Optional protected-branch GitOps key
+
+The repository owner's `main` ruleset requires pull requests and four successful
+checks. The final application job is an intentional exception because it must
+commit the already-scanned immutable image digest. GitHub does not allow its
+internal Actions integration to bypass a ruleset on a personal repository, so
+the job uses a write deploy key scoped to this repository only.
+
+Forks without this ruleset can leave `GITOPS_DEPLOY_KEY` unset and use the
+ephemeral `GITHUB_TOKEN`. To reproduce the protected setup:
+
+1. Generate a dedicated Ed25519 key pair; never reuse a workstation or AWS key.
+2. Add the public key under repository **Settings → Deploy keys**, with write
+   access and a name such as `GitOps digest promotion`.
+3. Store the private key as the repository Actions secret
+   `GITOPS_DEPLOY_KEY`.
+4. Create a `main` branch ruleset requiring pull requests, resolved review
+   conversations, and the four checks listed in
+   [the pipeline guide](pipeline-flow.md#main-branch-governance).
+5. Add deploy keys as the sole always-on ruleset bypass actor. Keep branch
+   deletion and force pushes blocked.
+
+The key should be rotated if its secret is exposed or repository ownership
+changes. Create and test the replacement before deleting the old deploy key.
+
 ## 6. Verify a new deployment
 
 ### 6.1 Terraform and AWS
