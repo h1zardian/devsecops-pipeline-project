@@ -5,8 +5,8 @@ awsRegion: "ap-south-1"
 image:
   repository: "ghcr.io/h1zardian/devsecops-pipeline-project"
   pullPolicy: Always
-  tag: "sha-fd11ee1"
-  digest: "sha256:e9d9cdaf94f1f48403f2eb98c0018103899d9edfb7511e6affa87f7196cab291"
+  tag: "sha-af6d674"
+  digest: "sha256:1c4d76cfdb7b1869d6b91a449f2734f9b6b6d32841d8d913cd6e3cdd42d77260"
 
 sqlHost: "devsecops-postgres-dev.cmksk3juhzgm.ap-south-1.rds.amazonaws.com"
 allowedHosts: "*"
