@@ -49,12 +49,17 @@ COPY --from=builder /usr/src/app/requirements.txt .
 
 # Install application wheels, then re-assert security-sensitive build/runtime
 # packages so transitive metadata cannot downgrade the patched versions.
+# Some wheels bundle SBOMs for their own build environments. Those stale
+# inventories are not the runtime filesystem and produce false CVE hits; CI
+# generates and attests an authoritative whole-image SBOM after scanning.
 RUN pip install --no-cache-dir /wheels/* && \
     pip install --no-cache-dir --upgrade pip \
       "msgpack==1.2.1" \
       "setuptools>=78.1.1" \
       "wheel>=0.46.2" \
-      "jaraco.context>=6.1.0"
+      "jaraco.context>=6.1.0" && \
+    find /usr/local/lib/python3.12/site-packages -type d -name sboms -prune -exec rm -rf {} + && \
+    rm -f /usr/local/lib/python3.12/site-packages/pip/_vendor/bom.cdx.json
 
 # Copy the entrypoint.sh script (if you have one)
 COPY --chown=app:app ./entrypoint.sh /home/app/web

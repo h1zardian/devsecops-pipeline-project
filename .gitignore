@@ -48,6 +48,7 @@ media
 # Environment files
 .env
 .env.local
+local-notes.md
 
 # Helm dependency archives (rebuild from Chart.lock)
 **/charts/
