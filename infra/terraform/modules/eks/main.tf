@@ -21,6 +21,15 @@ module "eks" {
     resources = ["secrets"]
   }
 
+  addons = {
+    coredns    = {}
+    kube-proxy = {}
+    vpc-cni = {
+      # Nodes cannot become Ready until the CNI daemon is available.
+      before_compute = true
+    }
+  }
+
   eks_managed_node_groups = {
     default = {
       instance_types    = ["t3.medium"]
@@ -33,7 +42,7 @@ module "eks" {
       metadata_options = {
         http_endpoint               = "enabled"
         http_tokens                 = "required"
-        http_put_response_hop_limit = 1
+        http_put_response_hop_limit = 2
       }
 
       # Hardening: Encrypted EBS root volume
