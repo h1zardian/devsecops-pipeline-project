@@ -1,7 +1,27 @@
 kube-prometheus-stack:
   grafana:
     enabled: true
-    adminPassword: "prom-operator"
+    admin:
+      existingSecret: grafana-admin-credentials
+      userKey: admin-user
+      passwordKey: admin-password
+    # Default: an AWS-generated public load-balancer hostname. For a custom
+    # HTTPS domain, change this to ClusterIP and enable the ingress below.
+    service:
+      type: LoadBalancer
+    ingress:
+      enabled: false
+      ingressClassName: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      hosts:
+        - grafana.example.com
+      path: /
+      tls:
+        - secretName: grafana-tls
+          hosts:
+            - grafana.example.com
     dashboardsConfigMaps:
       default: "django-app-dashboard"
   prometheus:
@@ -9,3 +29,6 @@ kube-prometheus-stack:
       serviceMonitorSelectorNilUsesHelmValues: false
       ruleSelectorNilUsesHelmValues: false
 
+externalSecrets:
+  enabled: true
+  environment: dev

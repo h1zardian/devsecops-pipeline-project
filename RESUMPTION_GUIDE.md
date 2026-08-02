@@ -24,7 +24,7 @@ This guide details the exact state of the project, native Terraform IRSA role ma
 ## 2. Simplified Pipeline Commands
 
 ### Bring Up Complete Stack (`make up`)
-Runs `terraform apply` (VPC, EKS 1.31, RDS PostgreSQL 15, OIDC IAM, ESO IRSA role), updates kubeconfig, runs Day 0 Ansible platform bootstrap, and prints live cluster status:
+Runs `terraform apply` (VPC, EKS 1.34, RDS PostgreSQL 15, OIDC IAM, ESO IRSA role), updates kubeconfig, runs Day 0 Ansible platform bootstrap, and prints live cluster status:
 
 ```bash
 make up

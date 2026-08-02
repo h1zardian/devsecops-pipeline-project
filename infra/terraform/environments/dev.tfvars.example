@@ -2,5 +2,10 @@ aws_region   = "ap-south-1"
 environment  = "dev"
 cluster_name = "devsecops-eks-cluster-dev"
 vpc_cidr     = "10.0.0.0/16"
-db_password  = "CHANGE_ME_IN_ENV_OR_SECRETS"
 github_repo  = "h1zardian/devsecops-pipeline-project"
+
+# Supply db_password through TF_VAR_db_password or an untracked dev.tfvars file.
+
+# Keep empty for a private-only EKS API. If workstation bootstrap access is
+# required, set this to trusted fixed addresses only, for example ["203.0.113.10/32"].
+cluster_endpoint_public_access_cidrs = []

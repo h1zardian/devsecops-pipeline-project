@@ -1,4 +1,9 @@
 ---
+- name: Configure Kyverno Helm repository
+  kubernetes.core.helm_repository:
+    name: kyverno
+    repo_url: https://kyverno.github.io/kyverno/
+
 - name: Create kyverno namespace
   kubernetes.core.k8s:
     name: "{{ kyverno_namespace }}"

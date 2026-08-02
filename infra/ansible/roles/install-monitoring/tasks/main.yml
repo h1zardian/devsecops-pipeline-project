@@ -1,4 +1,9 @@
 ---
+- name: Configure Prometheus Community Helm repository
+  kubernetes.core.helm_repository:
+    name: prometheus-community
+    repo_url: https://prometheus-community.github.io/helm-charts
+
 - name: Create monitoring namespace
   kubernetes.core.k8s:
     name: "{{ monitoring_namespace }}"

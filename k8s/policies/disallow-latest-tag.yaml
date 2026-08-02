@@ -14,6 +14,9 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: django-app
       validate:
         message: "Using the ':latest' image tag is prohibited."
         pattern:

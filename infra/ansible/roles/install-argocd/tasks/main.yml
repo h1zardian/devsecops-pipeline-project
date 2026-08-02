@@ -1,4 +1,9 @@
 ---
+- name: Configure Argo Helm repository
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: https://argoproj.github.io/argo-helm
+
 - name: Create argocd namespace
   kubernetes.core.k8s:
     name: "{{ argocd_namespace }}"

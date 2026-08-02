@@ -4,8 +4,9 @@ awsRegion: "ap-south-1"
 
 image:
   repository: "ghcr.io/h1zardian/devsecops-pipeline-project"
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: "sha-699017b"
+  digest: "sha256:1d7e5d4b1ac4bbfc83dd2350764a48e62dc09b91a50b08b3a4578ef2f92bb2f7"
 
 sqlHost: "devsecops-postgres-dev.cmksk3juhzgm.ap-south-1.rds.amazonaws.com"
 allowedHosts: "*"
@@ -13,8 +14,8 @@ allowedHosts: "*"
 externalSecrets:
   enabled: true
   environment: "dev"
-  secretKey: "django-insecure-dev-key-change-in-prod"
-  postgresPassword: "postgrespassword"
+  secretKey: ""
+  postgresPassword: ""
 
 serviceAccount:
   create: true
@@ -22,9 +23,15 @@ serviceAccount:
   annotations:
     eks.amazonaws.com/role-arn: "arn:aws:iam::072329308666:role/devsecops-eso-irsa-role-dev"
 
+# Default: an internet-facing AWS load balancer with an AWS-generated hostname.
+# For a custom HTTPS domain, change this to ClusterIP and enable ingress below.
+service:
+  type: LoadBalancer
+  annotations: {}
+
 ingress:
-  enabled: true
-  className: nginx
+  enabled: false
+  className: traefik
   host: app.example.com
 
 resources:

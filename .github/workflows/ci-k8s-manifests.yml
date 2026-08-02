@@ -15,30 +15,43 @@ jobs:
   validate-manifests:
     name: Helm Template, Kubeconform & Kyverno Dry-Run
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Install Helm & Kubeconform
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+
+      - name: Install Kubeconform
         run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | tar -xz -C /usr/local/bin kubeconform
+          curl -sSfL --output kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          echo "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883  kubeconform.tar.gz" | sha256sum --check
+          sudo tar -xzf kubeconform.tar.gz -C /usr/local/bin kubeconform
 
       - name: Render Helm Template & Kubeconform Schema Validation
         run: |
-          helm template django-app k8s/apps/django-app | kubeconform -strict -ignore-missing-schemas -summary
+          helm dependency build k8s/apps/monitoring-stack
+          helm lint k8s/apps/django-app k8s/apps/monitoring-stack
+          helm template django-app k8s/apps/django-app --namespace django > rendered-django.yaml
+          kubeconform -strict -ignore-missing-schemas -summary rendered-django.yaml
+          helm template monitoring-stack k8s/apps/monitoring-stack | kubeconform -strict -ignore-missing-schemas -summary
 
       - name: Install Kyverno CLI
         run: |
-          curl -sSfL https://github.com/kyverno/kyverno/releases/download/v1.18.2/kyverno-cli_v1.18.2_linux_x86_64.tar.gz | tar -xz -C /usr/local/bin kyverno
+          curl -sSfL --output kyverno.tar.gz https://github.com/kyverno/kyverno/releases/download/v1.18.2/kyverno-cli_v1.18.2_linux_x86_64.tar.gz
+          echo "cb2feb8356149fd2fe774c894ccf0969f4a60a83867dd913af724f74ffbbc18b  kyverno.tar.gz" | sha256sum --check
+          sudo tar -xzf kyverno.tar.gz -C /usr/local/bin kyverno
 
       - name: Kyverno Policy Test & Apply Dry-Run
         run: |
-          helm template django-app k8s/apps/django-app > rendered.yaml
-          kyverno apply k8s/policies/require-non-root.yaml k8s/policies/require-resource-limits.yaml k8s/policies/disallow-latest-tag.yaml --resource rendered.yaml
+          kyverno apply k8s/policies/require-non-root.yaml k8s/policies/require-resource-limits.yaml k8s/policies/disallow-latest-tag.yaml --resource .github/fixtures/django-policy-pod.yaml --warn-no-pass --warn-exit-code 1
+          kyverno apply k8s/policies/require-image-signature.yaml --resource .github/fixtures/django-policy-pod.yaml --registry --warn-no-pass --warn-exit-code 1
 
       - name: Checkov Kubernetes Scan
-        uses: bridgecrewio/checkov-action@v12
+        uses: bridgecrewio/checkov-action@7b972723c44fb3d256283fac96fae5d7c1894bb7 # v12
         with:
-          directory: k8s/
+          file: rendered-django.yaml
           framework: kubernetes
-          soft_fail: true
+          skip_check: CKV_K8S_35 # Django consumes externally-managed secrets as environment variables.
+          soft_fail: false

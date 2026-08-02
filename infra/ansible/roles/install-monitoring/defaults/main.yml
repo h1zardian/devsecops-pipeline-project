@@ -1,3 +1,5 @@
 ---
 monitoring_namespace: monitoring
-monitoring_chart_version: "72.0.0"
+monitoring_chart_version: "88.0.1"
+grafana_custom_domain_enabled: false
+grafana_host: "grafana.example.com"

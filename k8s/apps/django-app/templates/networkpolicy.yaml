@@ -2,21 +2,28 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: {{ include "django-app.fullname" . }}-netpol
+  namespace: {{ .Release.Namespace }}
 spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/name: django-app
   policyTypes: [Ingress, Egress]
   ingress:
+    {{- if eq .Values.service.type "LoadBalancer" }}
+    # The public service is the intended ingress boundary in AWS-hostname mode.
+    - ports:
+        - port: 8000
+    {{- else }}
     - from:
         - namespaceSelector:
             matchLabels:
-              name: ingress-nginx
+              kubernetes.io/metadata.name: traefik
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
       ports:
         - port: 8000
+    {{- end }}
   egress:
     - ports:
         - { port: 53, protocol: UDP }

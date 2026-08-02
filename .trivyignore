@@ -1,6 +1,2 @@
-# .trivyignore - Accepted Vulnerabilities Suppression
-# Format: CVE-YYYY-XXXX / GHSA-xxxx-xxxx-xxxx (Reason)
-CVE-2026-23949
-CVE-2026-24049
-CVE-2025-47273
-GHSA-6v7p-g79w-8964
+# No blanket vulnerability suppressions.
+# Add an exception only after documenting its owner, rationale, and expiry date.

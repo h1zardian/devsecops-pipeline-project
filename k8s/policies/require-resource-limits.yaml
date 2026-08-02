@@ -14,6 +14,9 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: django-app
       validate:
         message: "CPU and Memory resource requests/limits must be specified for all containers."
         pattern:

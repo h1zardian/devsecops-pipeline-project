@@ -3,11 +3,13 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "django-app.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
 spec:
   ingressClassName: {{ .Values.ingress.className }}
-  {{- if and .Values.ingress.host (ne .Values.ingress.host "app.example.com") }}
+  {{- if and .Values.ingress.host (ne .Values.ingress.host "*") }}
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
@@ -15,7 +17,7 @@ spec:
   {{- end }}
   rules:
     {{- if and .Values.ingress.host (ne .Values.ingress.host "*") }}
-    - host: {{ .Values.ingress.host }}
+    - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
           - path: /
@@ -25,7 +27,7 @@ spec:
                 name: {{ include "django-app.fullname" . }}
                 port:
                   number: 8000
-    {{- end }}
+    {{- else }}
     - http:
         paths:
           - path: /
@@ -35,4 +37,5 @@ spec:
                 name: {{ include "django-app.fullname" . }}
                 port:
                   number: 8000
+    {{- end }}
 {{- end }}

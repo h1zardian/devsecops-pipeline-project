@@ -27,11 +27,15 @@ data "aws_iam_policy_document" "github_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # GitHub OIDC sub claim now includes numeric IDs (e.g. owner@ID/repo@ID:ref)
+    # Only production-environment jobs may assume the provisioning role. Match
+    # both legacy and immutable GitHub OIDC subjects during GitHub's transition.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${replace(var.github_repo, "/", "@*/")}@*:*"]
+      values = [
+        "repo:${var.github_repo}:environment:production",
+        "repo:${replace(var.github_repo, "/", "@*/")}@*:environment:production"
+      ]
     }
   }
 }
@@ -45,6 +49,11 @@ resource "aws_iam_role" "github_actions" {
 # Uses wildcard read patterns (Describe*, Get*, List*) since terraform plan
 # must refresh state for ALL managed resources. Write actions are explicit.
 data "aws_iam_policy_document" "terraform_provisioner" {
+  #checkov:skip=CKV_AWS_108:Backend state access is required by Terraform and constrained by the protected OIDC trust policy.
+  #checkov:skip=CKV_AWS_109:Terraform must create IAM roles and policies before their final ARNs exist.
+  #checkov:skip=CKV_AWS_110:PassRole and policy attachment are required to provision EKS and are constrained by the protected OIDC trust policy.
+  #checkov:skip=CKV_AWS_111:Create-time AWS APIs require wildcard resources; actions are explicitly enumerated.
+  #checkov:skip=CKV_AWS_356:Create-time AWS resources have no ARN to scope; actions are explicitly enumerated.
 
   # --- Read-only access for terraform plan state refresh ---
   statement {
@@ -176,6 +185,8 @@ data "aws_iam_policy_document" "terraform_provisioner" {
       "kms:PutKeyPolicy",
       "kms:TagResource", "kms:UntagResource",
       "kms:EnableKeyRotation",
+      "kms:CreateGrant", "kms:RevokeGrant",
+      "kms:Encrypt", "kms:Decrypt", "kms:GenerateDataKey",
     ]
     resources = ["*"]
   }
@@ -247,7 +258,6 @@ resource "aws_iam_policy" "eso_secrets_manager" {
 
 # IRSA Role for External Secrets Operator (managed natively by Terraform)
 data "aws_iam_policy_document" "eso_irsa_assume" {
-  count = var.eks_oidc_issuer_url != "" ? 1 : 0
 
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -260,7 +270,7 @@ data "aws_iam_policy_document" "eso_irsa_assume" {
     condition {
       test     = "StringLike"
       variable = "${replace(var.eks_oidc_issuer_url, "https://", "")}:sub"
-      values   = [
+      values = [
         "system:serviceaccount:django:django-sa",
         "system:serviceaccount:external-secrets:*"
       ]
@@ -275,14 +285,11 @@ data "aws_iam_policy_document" "eso_irsa_assume" {
 }
 
 resource "aws_iam_role" "eso_irsa" {
-  count              = var.eks_oidc_issuer_url != "" ? 1 : 0
   name               = "devsecops-eso-irsa-role-${var.environment}"
-  assume_role_policy = data.aws_iam_policy_document.eso_irsa_assume[0].json
+  assume_role_policy = data.aws_iam_policy_document.eso_irsa_assume.json
 }
 
 resource "aws_iam_role_policy_attachment" "eso_irsa" {
-  count      = var.eks_oidc_issuer_url != "" ? 1 : 0
-  role       = aws_iam_role.eso_irsa[0].name
+  role       = aws_iam_role.eso_irsa.name
   policy_arn = aws_iam_policy.eso_secrets_manager.arn
 }
-

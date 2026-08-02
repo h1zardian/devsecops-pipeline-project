@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "django-app.fullname" . }}-db-migrate
+  namespace: {{ .Release.Namespace }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
@@ -9,13 +10,29 @@ spec:
   template:
     spec:
       serviceAccountName: {{ include "django-app.serviceAccountName" . }}
+      automountServiceAccountToken: false
       restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: db-migrate
+          {{- if .Values.image.digest }}
+          image: "{{ .Values.image.repository }}@{{ .Values.image.digest }}"
+          {{- else }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- end }}
           securityContext:
             runAsNonRoot: true
-            runAsUser: 1000
+            runAsUser: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["python", "manage.py", "migrate"]
           envFrom:
             - secretRef:
@@ -29,3 +46,13 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: staticfiles-volume
+              mountPath: /home/app/web/staticfiles
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+        - name: staticfiles-volume
+          emptyDir: {}

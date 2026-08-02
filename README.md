@@ -20,7 +20,7 @@ graph TD
 
     subgraph "Terraform — Cloud Infrastructure"
         T1["VPC + Subnets + NAT"]
-        T2["EKS Cluster (v20+, K8s 1.31) + Hardened Nodes"]
+        T2["EKS Cluster (v20+, K8s 1.34) + Hardened Nodes"]
         T3["RDS PostgreSQL (Encrypted)"]
         T4["GitHub OIDC Provider + IAM Roles"]
         T5["S3 + DynamoDB (TF state backend)"]
@@ -31,7 +31,7 @@ graph TD
         B2["Kyverno"]
         B3["External Secrets Operator"]
         B4["kube-prometheus-stack"]
-        B5["Ingress NGINX + cert-manager"]
+        B5["AWS load balancers / optional Traefik + cert-manager"]
     end
 
     subgraph "ArgoCD — Day 1+ GitOps (continuous)"
@@ -97,21 +97,82 @@ make init-state
 ```
 
 ### 2. Provision Infrastructure
+
+The EKS API is private by default. Run the Ansible bootstrap from inside the
+VPC, or set `cluster_endpoint_public_access_cidrs` in your untracked
+`environments/dev.tfvars` to trusted `/32` addresses before provisioning.
+
 ```bash
 make cluster-up
 ```
 
 ### 3. Bootstrap Day 0 Platform Controllers
 ```bash
-aws eks update-kubeconfig --name devsecops-eks-cluster --region ap-south-1
+aws eks update-kubeconfig \
+  --name "$(cd infra/terraform && terraform output -raw eks_cluster_name)" \
+  --region ap-south-1
 make ansible-bootstrap
 ```
 
 ### 4. Continuous GitOps Delivery
 ArgoCD automatically detects changes in `k8s/apps/django-app/values.yaml` and deploys the application.
 
+### 5. Access the Public Endpoints
+
+By default, Kubernetes provisions three internet-facing AWS load balancers.
+Wait until their AWS-generated hostnames appear:
+
+```bash
+kubectl get service -A | awk 'NR == 1 || $3 == "LoadBalancer"'
+```
+
+Open the endpoints over HTTP (the app service listens on port `8000`):
+
+```bash
+echo "App:     http://$(kubectl get service django-app -n django -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'):8000"
+echo "Argo CD: http://$(kubectl get service argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+echo "Grafana: http://$(kubectl get service monitoring-stack-grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+```
+
+Retrieve Argo CD's initial `admin` password with:
+
+```bash
+kubectl get secret argocd-initial-admin-secret -n argocd \
+  -o jsonpath='{.data.password}' | base64 --decode
+```
+
+AWS does not issue a browser-trusted certificate for an AWS-generated load
+balancer hostname. These default endpoints therefore use HTTP. Grafana's
+generated admin password remains in AWS Secrets Manager and is synchronized by
+External Secrets Operator:
+
+```bash
+kubectl get secret grafana-admin-credentials -n monitoring \
+  -o jsonpath='{.data.admin-password}' | base64 --decode
+```
+
+### Optional custom domains and HTTPS
+
+The Traefik and cert-manager setup remains available. To switch modes:
+
+1. In `k8s/apps/django-app/values.yaml`, set `service.type: ClusterIP`, set
+   `ingress.enabled: true`, and replace `ingress.host` with the app domain.
+2. In `k8s/apps/monitoring-stack/values.yaml`, set Grafana's service type to
+   `ClusterIP`, enable its ingress, and replace both Grafana host entries.
+3. Bootstrap with the Argo CD domain and optional controllers enabled:
+
+   ```bash
+   cd infra/ansible
+   ansible-playbook -i inventory/localhost.yml playbooks/bootstrap-cluster.yml \
+     --extra-vars 'custom_domain_enabled=true argocd_domain=argocd.example.com admin_email=admin@example.com'
+   ```
+
+4. Point each DNS record at the Traefik service hostname. cert-manager will
+   request the configured Let's Encrypt certificates after DNS resolves.
+
 ---
 
 ## Cost Optimization
 * **On-Demand AWS Spend**: Use `make cluster-down` to destroy infrastructure when not demonstrating or testing (~$150/month active vs <$10/month on-demand).
+* **Endpoint Tradeoff**: AWS-hostname mode creates three load balancers. Custom-domain mode consolidates the endpoints behind the single optional Traefik load balancer.
 * **Zero-Cost Local Iteration**: Run `make dev-up` to launch local Docker Compose stack for offline development.

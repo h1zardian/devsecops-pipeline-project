@@ -1,17 +1,37 @@
 ---
-- name: Create ingress-nginx namespace
+- name: Configure Traefik Helm repository
+  kubernetes.core.helm_repository:
+    name: traefik
+    repo_url: https://traefik.github.io/charts
+
+- name: Create Traefik namespace
   kubernetes.core.k8s:
     name: "{{ ingress_namespace }}"
     api_version: v1
     kind: Namespace
     state: present
 
-- name: Deploy ingress-nginx via Helm
+- name: Deploy Traefik ingress controller via Helm
   kubernetes.core.helm:
-    name: ingress-nginx
-    chart_ref: ingress-nginx/ingress-nginx
+    name: traefik
+    chart_ref: traefik/traefik
     chart_version: "{{ ingress_chart_version }}"
     release_namespace: "{{ ingress_namespace }}"
+    values:
+      ingressClass:
+        enabled: true
+        isDefaultClass: false
+      ports:
+        web:
+          http:
+            redirections:
+              entryPoint:
+                to: websecure
+                scheme: https
+                permanent: true
+      service:
+        spec:
+          type: LoadBalancer
     state: present
     wait: true
     wait_timeout: "5m0s"

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: django-policy-test
+  namespace: django
+  labels:
+    app.kubernetes.io/name: django-app
+spec:
+  containers:
+    - name: django-app
+      image: ghcr.io/h1zardian/devsecops-pipeline-project@sha256:1d7e5d4b1ac4bbfc83dd2350764a48e62dc09b91a50b08b3a4578ef2f92bb2f7
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi

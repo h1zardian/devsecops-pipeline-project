@@ -37,6 +37,5 @@ variable "github_repo" {
 variable "cluster_endpoint_public_access_cidrs" {
   description = "List of CIDRs allowed to access EKS API server"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = []
 }
-

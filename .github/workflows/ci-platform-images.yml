@@ -1,0 +1,57 @@
+name: Platform Controller Image CVE Scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 3 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/ansible/playbooks/bootstrap-cluster.yml'
+      - 'infra/ansible/roles/**/defaults/main.yml'
+      - 'k8s/apps/monitoring-stack/Chart.yaml'
+      - 'k8s/apps/monitoring-stack/Chart.lock'
+      - '.github/workflows/ci-platform-images.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/ansible/playbooks/bootstrap-cluster.yml'
+      - 'infra/ansible/roles/**/defaults/main.yml'
+      - 'k8s/apps/monitoring-stack/Chart.yaml'
+      - 'k8s/apps/monitoring-stack/Chart.lock'
+      - '.github/workflows/ci-platform-images.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scan-controller-images:
+    name: Scan ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: Argo CD
+            image: quay.io/argoproj/argocd:v3.4.6
+          - component: Kyverno
+            image: reg.kyverno.io/kyverno/kyverno:v1.18.2
+          - component: External Secrets
+            image: ghcr.io/external-secrets/external-secrets:v2.8.0
+          - component: cert-manager
+            image: quay.io/jetstack/cert-manager-controller:v1.21.1
+          - component: Traefik
+            image: docker.io/library/traefik:v3.7.9
+          - component: Grafana
+            image: docker.io/grafana/grafana:13.1.1
+          - component: Prometheus
+            image: quay.io/prometheus/prometheus:v3.13.2-distroless
+    steps:
+      - name: Scan image for fixable HIGH/CRITICAL CVEs
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL

@@ -10,7 +10,7 @@ graph TD
 
     subgraph "Terraform — Cloud Infrastructure"
         T1["VPC + Subnets + NAT"]
-        T2["EKS Cluster (v20+, K8s 1.31) + Hardened Nodes (IMDSv2)"]
+        T2["EKS Cluster (v20+, K8s 1.34) + Hardened Nodes (IMDSv2)"]
         T3["RDS PostgreSQL (Encrypted at rest)"]
         T4["GitHub OIDC Provider + Scoped IAM Roles"]
         T5["S3 + DynamoDB (TF state backend)"]
@@ -21,7 +21,7 @@ graph TD
         B2["Kyverno"]
         B3["External Secrets Operator (ESO)"]
         B4["kube-prometheus-stack"]
-        B5["Ingress NGINX + cert-manager"]
+        B5["AWS load balancers / optional Traefik + cert-manager"]
         B6["configure-argocd-apps (App-of-Apps)"]
     end
 

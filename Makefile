@@ -49,8 +49,8 @@ status:
 	@kubectl describe clustersecretstore aws-secrets-manager 2>/dev/null | grep -E "Status:|Reason:|Message:" || true
 	@kubectl get pods -n django || true
 	@echo ""
-	@echo "=================== INGRESS LIVE ENDPOINT ==================="
-	@kubectl get ingress -n django || true
+	@echo "=================== PUBLIC AWS LOAD BALANCERS ==================="
+	@kubectl get service -A | awk 'NR == 1 || $$3 == "LoadBalancer"' || true
 
 ansible-bootstrap:
 	cd infra/ansible && ansible-playbook -i inventory/localhost.yml playbooks/bootstrap-cluster.yml

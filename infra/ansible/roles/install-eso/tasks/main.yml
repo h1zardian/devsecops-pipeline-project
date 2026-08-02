@@ -1,4 +1,9 @@
 ---
+- name: Configure External Secrets Helm repository
+  kubernetes.core.helm_repository:
+    name: external-secrets
+    repo_url: https://charts.external-secrets.io
+
 - name: Create external-secrets namespace
   kubernetes.core.k8s:
     name: "{{ eso_namespace }}"
