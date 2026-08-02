@@ -4,8 +4,16 @@ metadata:
   name: {{ include "django-app.fullname" . }}-db-migrate
   namespace: {{ .Release.Namespace }}
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
+    {{- if .Values.gitOps.enabled }}
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    {{- else }}
+    # Direct Helm installs need application secrets to exist before the first
+    # migration. Upgrades still migrate before the new Deployment is applied.
+    "helm.sh/hook": post-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    {{- end }}
 spec:
   template:
     spec:

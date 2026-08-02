@@ -42,6 +42,146 @@ resource "aws_iam_role" "github_actions" {
   assume_role_policy = data.aws_iam_policy_document.github_assume_role.json
 }
 
+data "aws_iam_policy_document" "github_plan_assume_role" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values = [
+        "repo:${var.github_repo}:environment:production-infrastructure-plan",
+        "repo:${replace(var.github_repo, "/", "@*/")}@*:environment:production-infrastructure-plan"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions_plan" {
+  name               = "devsecops-github-actions-plan-role-${var.environment}"
+  assume_role_policy = data.aws_iam_policy_document.github_plan_assume_role.json
+}
+
+# This identity can refresh the Terraform graph and briefly acquire the S3
+# lockfile, but it cannot mutate infrastructure or write the state object.
+data "aws_iam_policy_document" "terraform_plan" {
+  #checkov:skip=CKV_AWS_108:Terraform plan must read the complete managed graph; its OIDC trust is environment-scoped.
+  #checkov:skip=CKV_AWS_111:Read-only Describe/Get/List APIs do not support useful resource-level constraints.
+  #checkov:skip=CKV_AWS_356:Read-only Describe/Get/List APIs do not support useful resource-level constraints.
+  statement {
+    sid       = "EC2ReadAccess"
+    effect    = "Allow"
+    actions   = ["ec2:Describe*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "IAMReadAccess"
+    effect    = "Allow"
+    actions   = ["iam:Get*", "iam:List*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "EKSReadAccess"
+    effect    = "Allow"
+    actions   = ["eks:Describe*", "eks:List*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "OtherReadAccess"
+    effect = "Allow"
+    actions = [
+      "rds:Describe*",
+      "rds:ListTagsForResource",
+      "kms:Describe*",
+      "kms:Get*",
+      "kms:List*",
+      "logs:Describe*",
+      "logs:List*",
+      "sts:GetCallerIdentity",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "ApplicationSecretReadAccess"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:ListSecretVersionIds",
+    ]
+    resources = ["arn:aws:secretsmanager:*:*:secret:${var.environment}/*"]
+  }
+
+  statement {
+    sid       = "ApplicationSecretDecryptAccess"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = [var.secrets_kms_key_arn]
+  }
+
+  statement {
+    sid       = "ReadTerraformState"
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::${var.terraform_state_bucket}/${var.terraform_state_key}"]
+  }
+
+  statement {
+    sid     = "ListTerraformState"
+    effect  = "Allow"
+    actions = ["s3:ListBucket"]
+    resources = [
+      "arn:aws:s3:::${var.terraform_state_bucket}"
+    ]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values = [
+        var.terraform_state_key,
+        "${var.terraform_state_key}.tflock",
+      ]
+    }
+  }
+
+  statement {
+    sid    = "ManageTerraformLockfile"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+    ]
+    resources = ["arn:aws:s3:::${var.terraform_state_bucket}/${var.terraform_state_key}.tflock"]
+  }
+}
+
+resource "aws_iam_policy" "terraform_plan" {
+  name        = "devsecops-terraform-plan-policy-${var.environment}"
+  description = "Read-only Terraform plan and scoped backend lock access"
+  policy      = data.aws_iam_policy_document.terraform_plan.json
+}
+
+resource "aws_iam_role_policy_attachment" "terraform_plan" {
+  role       = aws_iam_role.github_actions_plan.name
+  policy_arn = aws_iam_policy.terraform_plan.arn
+}
+
 # IAM policy for Terraform CI/CD runner via GitHub OIDC
 # Uses wildcard read patterns (Describe*, Get*, List*) since terraform plan
 # must refresh state for ALL managed resources. Write actions are explicit.
@@ -93,13 +233,21 @@ data "aws_iam_policy_document" "terraform_provisioner" {
       "kms:List*",
       "logs:Describe*",
       "logs:List*",
-      "secretsmanager:Describe*",
-      "secretsmanager:GetResourcePolicy",
-      "secretsmanager:GetSecretValue",
-      "secretsmanager:ListSecretVersionIds",
       "sts:GetCallerIdentity",
     ]
     resources = ["*"]
+  }
+
+  statement {
+    sid    = "ApplicationSecretReadAccess"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:ListSecretVersionIds",
+    ]
+    resources = ["arn:aws:secretsmanager:*:*:secret:${var.environment}/*"]
   }
 
   # --- Write access for terraform apply ---
@@ -212,13 +360,26 @@ data "aws_iam_policy_document" "terraform_provisioner" {
   }
 
   statement {
-    sid    = "S3AndDynamoDBBackendPermissions"
+    sid    = "TerraformStateBucketAccess"
     effect = "Allow"
     actions = [
-      "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket",
-      "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem",
+      "s3:ListBucket",
     ]
-    resources = ["*"]
+    resources = ["arn:aws:s3:::${var.terraform_state_bucket}"]
+  }
+
+  statement {
+    sid    = "TerraformStateObjectAccess"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.terraform_state_bucket}/${var.terraform_state_key}",
+      "arn:aws:s3:::${var.terraform_state_bucket}/${var.terraform_state_key}.tflock",
+    ]
   }
 }
 

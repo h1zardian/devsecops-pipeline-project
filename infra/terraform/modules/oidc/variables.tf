@@ -24,3 +24,13 @@ variable "secrets_kms_key_arn" {
   description = "KMS key ARN used by Secrets Manager for application secrets"
   type        = string
 }
+
+variable "terraform_state_bucket" {
+  description = "S3 bucket containing the Terraform backend state"
+  type        = string
+}
+
+variable "terraform_state_key" {
+  description = "S3 object key containing the Terraform backend state"
+  type        = string
+}

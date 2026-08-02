@@ -64,7 +64,7 @@ tools compete for the same object.
 | Terraform | VPC, subnets, routes, NAT/EIP, EKS, nodes, RDS, KMS, Secrets Manager, IAM, OIDC, and remote-state references | Helm releases and application rollouts |
 | Ansible | Initial Helm installation of Argo CD, Kyverno, and ESO; optional Traefik/cert-manager; initial Argo CD Application objects | Day-1 application image promotion |
 | Argo CD | Django chart, monitoring chart, Kyverno policies, ClusterSecretStore, metrics server, pruning, and drift reconciliation | AWS infrastructure |
-| GitHub Actions | Application tests, validation, image build, CVE gate, signing, attestations, and the desired image-digest commit | Direct Kubernetes mutation |
+| GitHub Actions | Application tests, validation, image build, CVE gate, signing, attestations, desired image-digest commit, read-only infrastructure plan, and approved infrastructure apply | Direct Kubernetes mutation |
 | Kubernetes controllers | Scheduling, rollout, HPA, load-balancer provisioning, secret synchronization, admission, and monitoring reconciliation | Source-of-truth changes |
 
 Terraform is run before Ansible because the bootstrap requires a reachable EKS
@@ -185,7 +185,8 @@ The Helm chart creates:
 - A two-replica Deployment with immutable digest support.
 - An internet-facing `LoadBalancer` Service in the default exposure mode.
 - Readiness and liveness probes on `/healthz`.
-- A post-install/post-upgrade database migration Job.
+- A migration Job ordered by Argo CD sync waves after configuration and before
+  Deployment rollout; direct Helm installs use post-install/pre-upgrade hooks.
 - An HPA with a two-to-five replica range.
 - A NetworkPolicy for DNS, PostgreSQL, HTTPS egress, and intended ingress.
 - A ConfigMap plus an ESO-managed Secret.
@@ -235,9 +236,11 @@ sequenceDiagram
 There are three distinct principals:
 
 - The human or automation identity performing the initial local bootstrap.
-- The GitHub Actions role, trusted only for the configured repository's
-  `production-infrastructure` environment and intended for manual Terraform
-  apply.
+- A read-only GitHub Actions plan role, trusted only for the configured
+  repository's `production-infrastructure-plan` environment. It can refresh the
+  graph and manage only the S3 lock object.
+- A separate GitHub Actions apply role, trusted only for the configured
+  repository's protected `production-infrastructure` environment.
 - The ESO role, trusted only for the
   `system:serviceaccount:external-secrets:external-secrets` identity.
 
@@ -342,3 +345,13 @@ short-lived operation:
 
 Those choices are visible and reversible rather than hidden in manual account
 configuration.
+
+### Tool-selection decisions
+
+| Choice | Why it fits this project | When the alternative may fit better |
+| --- | --- | --- |
+| Argo CD over Flux | The UI makes sync health, drift and deployment evidence easy to demonstrate to an evaluator. | Flux is attractive for a smaller, CLI-first platform or deeper toolkit composition. |
+| Kyverno over OPA/Gatekeeper | Policies use Kubernetes-native YAML and can verify Cosign identities without introducing Rego into this portfolio. | Gatekeeper is useful where an organization already standardizes on Rego and OPA policy libraries. |
+| GHCR over ECR | Native repository permissions, `GITHUB_TOKEN`, public portfolio visibility and Sigstore integration minimize bootstrap credentials. | ECR can simplify private, AWS-only registry networking and IAM governance. |
+| Ansible over Terraform Helm resources | Keeps day-0 controller recovery out of the AWS infrastructure state and avoids provider-ordering cycles. | Terraform Helm can be reasonable when one team deliberately accepts a single state and lifecycle. |
+| S3-native locking over DynamoDB | Current Terraform supports lockfiles directly in the encrypted, versioned backend bucket. | DynamoDB remains relevant to older Terraform estates during migration. |

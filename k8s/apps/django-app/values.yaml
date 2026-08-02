@@ -17,6 +17,11 @@ externalSecrets:
   secretKey: ""
   postgresPassword: ""
 
+gitOps:
+  # Argo CD uses sync waves to run migrations after configuration/secrets exist
+  # and before the Deployment rolls out. Disable only for direct Helm installs.
+  enabled: true
+
 serviceAccount:
   create: true
   name: django-sa

@@ -5,6 +5,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: django-app
+  {{- if .Values.gitOps.enabled }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  {{- end }}
 data:
   ALLOWED_HOSTS: {{ .Values.allowedHosts | default .Values.ingress.host | quote }}
   PYTHONDONTWRITEBYTECODE: "1"

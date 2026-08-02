@@ -12,7 +12,7 @@ not silently gain deployment permission.
 | Workflow | Trigger | Primary gates | May mutate external state? |
 | --- | --- | --- | --- |
 | `App CI/CD Pipeline` | Push to `main` affecting `app/` or its workflow; every pull request; manual dispatch | Gitleaks, Django smoke tests, Bandit, pip-audit, Trivy, signing, SBOM and provenance publication | On `main`: writes GHCR and commits the immutable digest to Git |
-| `Terraform Infrastructure CI/CD` | Terraform/workflow push; every pull request; manual dispatch | TFLint, Checkov, init, validate; plan during manual apply | Only the manually dispatched `main` job can assume the AWS role and apply |
+| `Terraform Infrastructure CI/CD` | Terraform/workflow push; every pull request; manual dispatch | TFLint, Checkov, init, validate; read-only saved plan; required approval | Only the approved `main` apply job can assume the provisioning role and mutate AWS |
 | `Kubernetes Manifests & Policy CI` | Kubernetes/workflow push; every pull request | Helm lint/render, kubeconform, Kyverno CLI tests, Checkov | No; validation only |
 | `Platform Controller Image CVE Scan` | Weekly schedule, manual dispatch, or pinned platform-version change | Trivy fixable `HIGH`/`CRITICAL` scan | No; reports risk only |
 | Dependabot | Weekly by ecosystem | Opens grouped or scoped update pull requests | Pull requests only; normal branch controls still apply |
@@ -180,11 +180,15 @@ flowchart TD
     Init --> Validate[terraform validate]
     Validate --> Event{Event type}
     Event -->|push or pull request| Stop[Validation complete]
-    Event -->|manual dispatch on main| Environment[production-infrastructure environment]
-    Environment --> OIDC[GitHub OIDC token]
-    OIDC --> Role[AWS provisioning role]
-    Role --> Plan[terraform plan]
-    Plan --> Apply[terraform apply saved plan]
+    Event -->|manual dispatch on main| PlanEnv[production-infrastructure-plan]
+    PlanEnv --> PlanOIDC[GitHub OIDC token]
+    PlanOIDC --> ReadRole[Read-only AWS plan role]
+    ReadRole --> Plan[Saved plan + checksum + summary]
+    Plan --> Approval{Required environment reviewer}
+    Approval -->|approved| ApplyOIDC[Apply-role OIDC token]
+    Approval -->|rejected| StopApply[No AWS mutation]
+    ApplyOIDC --> Verify[Download and verify saved plan]
+    Verify --> Apply[terraform apply saved plan]
 ```
 
 ### Validation path
@@ -193,25 +197,33 @@ TFLint initializes its plugins and checks the Terraform tree. Checkov performs a
 hard-fail Terraform scan. Terraform initializes without the remote backend for
 syntax and provider validation. These checks run without AWS write permission.
 
-### Apply path
+### Plan and apply path
 
-The apply job has three independent controls:
+Manual deployment has independent identities and jobs:
 
-1. It runs only for `workflow_dispatch` on `main`.
-2. It is attached to the `production-infrastructure` GitHub environment, where
-   repository owners can add reviewers or wait rules.
-3. AWS IAM trusts the repository's matching environment OIDC subject rather than
-   a stored AWS access key.
+1. Dispatch is accepted only from `main` after static validation succeeds.
+2. `production-infrastructure-plan` can assume only a read-only AWS role. That
+   role may refresh managed resources, read the state object and acquire the
+   exact S3 lockfile, but cannot write Terraform state or mutate infrastructure.
+3. The plan job publishes a human-readable workflow summary and a one-day
+   artifact containing the binary plan plus its checksum.
+4. The separate apply job waits on required reviewers configured for the
+   `production-infrastructure` environment.
+5. After approval, the apply job downloads and verifies the same saved plan and
+   assumes the write-capable role through the apply environment's OIDC subject.
 
-The job receives only `id-token: write` and `contents: read`. It creates a saved
-plan with the configured environment values and applies that exact plan.
+Both jobs receive only `id-token: write` and `contents: read`. The binary plan is
+sensitive operational material because it can contain planned values, so its
+artifact retention is limited to one day and it must not be downloaded or
+shared outside the authorized repository audience.
 
 ### OIDC bootstrap boundary
 
 Terraform itself creates the GitHub OIDC provider and provisioning role. A clean
 account therefore needs one initial local apply by an authorized human identity.
-After that apply, the role ARN and database password can be stored as secrets in
-the protected GitHub environment, enabling future manually approved runs.
+After that apply, the read-only plan role ARN and database password are stored
+in `production-infrastructure-plan`; the apply role ARN is stored separately in
+the protected `production-infrastructure` environment.
 
 Terraform deployment status uses `production-infrastructure`, separate from the
 application's `production` deployment status. A failed infrastructure apply no
@@ -282,7 +294,8 @@ Ansible or Helm remain explicit operator-reviewed changes.
 | Provenance | GitHub OIDC and attestation permission | Publish digest-bound provenance |
 | GitOps update | Repository-scoped write deploy key | Update one desired-state file and bypass only the `main` ruleset |
 | Terraform validation | No AWS credential | Static checks and local validation |
-| Terraform apply | GitHub environment OIDC | Assume scoped AWS provisioning role |
+| Terraform plan | GitHub environment OIDC | Assume read-only refresh role and manage only the backend lockfile |
+| Terraform apply | Protected GitHub environment OIDC | Apply the reviewed plan with the provisioning role |
 | Argo CD | In-cluster service account | Reconcile declared Kubernetes resources |
 | ESO | EKS service-account OIDC | Read the environment's Secrets Manager path and decrypt one KMS key |
 | Django pod | No mounted service-account token | Serve the app and connect to RDS using synchronized values |
