@@ -3,7 +3,7 @@
 help:
 	@echo "DevSecOps Platform Pipeline Commands:"
 	@echo "  make up (or cluster-up)   - Bring up complete AWS infra (VPC, EKS, RDS, OIDC/IRSA) + Day 0 platform bootstrap"
-	@echo "  make down (or destroy)    - Cleanly tear down all AWS infra & K8s cloud resources to 0 cost"
+	@echo "  make down (or destroy)    - Tear down runtime AWS infra & Kubernetes cloud resources"
 	@echo "  make status               - Display status of cluster pods, IRSA role, and live app endpoint"
 	@echo "  make dev-up               - Start local docker-compose development stack"
 	@echo "  make dev-down             - Stop local docker-compose development stack"

@@ -53,13 +53,9 @@ for arn in $(aws elbv2 describe-load-balancers --region "$REGION" \
   fi
 done
 
-# Wait for Network Interfaces to detach
-echo "==> Waiting 10s for Network Interfaces to detach..."
-sleep 10
-
-# 3. Delete only dedicated Kubernetes load-balancer security groups. Never
+# 3. Identify only dedicated Kubernetes load-balancer security groups. Never
 # sweep all VPC security groups: most of them are owned by Terraform.
-echo "==> Cleaning up dedicated Kubernetes load-balancer security groups..."
+K8S_LB_SECURITY_GROUPS=""
 for sg in $LB_SECURITY_GROUPS; do
   if [ -z "$sg" ] || [ "$sg" = "None" ]; then
     continue
@@ -77,20 +73,47 @@ for sg in $LB_SECURITY_GROUPS; do
 
   if [[ "$SG_NAME" == k8s-* || "$SG_NAME" == k8s_* || \
     "$SG_DESCRIPTION" == *"Kubernetes ELB"* || "$SG_OWNER_TAGS" =~ ^[1-9][0-9]*$ ]]; then
-    echo "Deleting Kubernetes load-balancer Security Group: $sg"
-    for attempt in 1 2 3 4 5 6; do
-      if aws ec2 delete-security-group --group-id "$sg" --region "$REGION" 2>/dev/null; then
-        break
-      fi
-      if [ "$attempt" -eq 6 ]; then
-        echo "==> Warning: $sg is still in use; Terraform will retry during destroy."
-        break
-      fi
-      sleep 5
-    done
+    K8S_LB_SECURITY_GROUPS="$K8S_LB_SECURITY_GROUPS $sg"
   else
     echo "Leaving shared or Terraform-managed Security Group unchanged: $sg ($SG_NAME)"
   fi
+done
+
+# ELB network interfaces commonly remain for several minutes after the delete
+# API returns. Retry all confirmed Kubernetes groups in rounds so groups checked
+# early are retried after their network interfaces finally detach.
+echo "==> Cleaning up dedicated Kubernetes load-balancer security groups..."
+MAX_SG_DELETE_ATTEMPTS=30
+for attempt in $(seq 1 "$MAX_SG_DELETE_ATTEMPTS"); do
+  REMAINING_SECURITY_GROUPS=""
+
+  for sg in $K8S_LB_SECURITY_GROUPS; do
+    if ! aws ec2 describe-security-groups --region "$REGION" --group-ids "$sg" \
+      >/dev/null 2>&1; then
+      continue
+    fi
+
+    if aws ec2 delete-security-group --group-id "$sg" --region "$REGION" \
+      >/dev/null 2>&1; then
+      echo "Deleted Kubernetes load-balancer Security Group: $sg"
+    else
+      REMAINING_SECURITY_GROUPS="$REMAINING_SECURITY_GROUPS $sg"
+    fi
+  done
+
+  K8S_LB_SECURITY_GROUPS="$REMAINING_SECURITY_GROUPS"
+  if [ -z "${K8S_LB_SECURITY_GROUPS// }" ]; then
+    break
+  fi
+
+  if [ "$attempt" -eq "$MAX_SG_DELETE_ATTEMPTS" ]; then
+    echo "==> Warning: Kubernetes load-balancer security groups are still in use:$K8S_LB_SECURITY_GROUPS"
+    echo "==> Rerun this cleanup after the AWS load-balancer network interfaces detach."
+    break
+  fi
+
+  echo "==> Waiting 10s for load-balancer network interfaces to detach (attempt $attempt/$MAX_SG_DELETE_ATTEMPTS)..."
+  sleep 10
 done
 
 echo "==> Pre-destroy cleanup completed successfully."

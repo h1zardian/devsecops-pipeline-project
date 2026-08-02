@@ -765,10 +765,13 @@ make down
 ```
 
 `make down` first removes Kubernetes-created Classic/ELBv2 load balancers and
-their dedicated security groups, then runs `terraform destroy`. Review the
-cleanup warnings even if Terraform succeeds. If AWS reports a dependency that
-is still deleting, wait for it to finish and rerun `make down`; the operation is
-idempotent.
+their dedicated security groups, then runs `terraform destroy`. AWS can retain
+load-balancer network interfaces for several minutes after accepting deletion,
+so the cleanup retries every confirmed Kubernetes security group for up to five
+minutes. Review any cleanup warning even if Terraform continues. If a group is
+still attached after that window, wait for the ELB network interface to detach,
+rerun `infra/scripts/cleanup-k8s-cloud-resources.sh`, and then rerun `make down`;
+the operations are idempotent.
 
 Do not manually delete Terraform-managed VPC, EKS, RDS, IAM, or KMS resources
 before `terraform destroy`, because that creates state drift and makes a clean
@@ -831,6 +834,9 @@ Deleting a versioned state bucket is irreversible. Never perform this step while
 Terraform still manages infrastructure. GitHub Actions history, GitHub
 environments, GHCR images, and repository data are not AWS resources and are not
 removed by the AWS teardown.
+
+To deploy again after permanent backend deletion, run `make init-state` and
+`terraform -chdir=infra/terraform init -reconfigure` before planning or applying.
 
 After the KMS waiting period expires and the optional backend deletion is
 complete, the project should leave no active AWS service resources.

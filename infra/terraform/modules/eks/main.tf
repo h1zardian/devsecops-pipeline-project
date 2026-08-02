@@ -15,7 +15,8 @@ module "eks" {
   subnet_ids = var.subnet_ids
 
   # KMS envelope encryption for Secrets
-  create_kms_key = true
+  create_kms_key                  = true
+  kms_key_deletion_window_in_days = 7
   encryption_config = {
     resources = ["secrets"]
   }
