@@ -602,10 +602,10 @@ make ansible-bootstrap
 ### Infrastructure changes
 
 Change Terraform through a pull request and require every repository check,
-including Terraform validation, to pass. Apply locally with `make up` while the fork's
-`GIT_REPO_URL` is exported, or manually dispatch the Terraform workflow after
-its environment and OIDC secrets are configured. Always inspect the Terraform
-plan before approving a material change.
+including Terraform validation, to pass. Apply locally with `make up` while the
+fork's `GIT_REPO_URL` is exported, or manually dispatch the Terraform workflow
+after its environment and OIDC secrets are configured. Always inspect the
+Terraform plan before approving a material change.
 
 ### Refreshing secrets
 

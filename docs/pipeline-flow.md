@@ -21,6 +21,26 @@ All third-party actions are pinned to immutable commit SHAs. Workflow-level
 permissions start read-only and are expanded only on jobs that publish packages,
 attestations, Git commits, or AWS mutations.
 
+## Main branch governance
+
+An active repository ruleset requires human-authored changes to reach `main`
+through a pull request with resolved review conversations and these successful
+checks:
+
+- `Security & Test Gates`
+- `Build, Scan, Push & Sign Container`
+- `Helm Template, Kubeconform & Kyverno Dry-Run`
+- `Lint, Checkov & Validate`
+
+The application, Kubernetes, and Terraform validation workflows therefore run
+on every pull request, even when their push triggers remain path-scoped. The
+ruleset also blocks branch deletion and force pushes.
+
+The GitHub Actions integration is the sole always-on bypass actor. It is needed
+because the already-gated application workflow writes the immutable image digest
+directly to the Helm values on `main`. That job has only `contents: write`; human
+contributors do not inherit the bypass.
+
 ## Application pipeline
 
 ```mermaid
