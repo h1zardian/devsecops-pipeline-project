@@ -6,16 +6,20 @@ metadata:
     policies.kyverno.io/title: Require Non-Root Execution
     policies.kyverno.io/category: Pod Security Standards
 spec:
+  admission: true
   validationFailureAction: Enforce
   background: true
+  emitWarning: false
   rules:
     - name: check-non-root
+      skipBackgroundRequests: true
       match:
         any:
           - resources:
               kinds: [Pod]
               namespaces: [django]
       validate:
+        allowExistingViolations: true
         message: "Containers must run as a non-root user (runAsNonRoot: true)."
         pattern:
           spec:

@@ -6,16 +6,20 @@ metadata:
     policies.kyverno.io/title: Require Resource Limits
     policies.kyverno.io/category: Best Practices
 spec:
+  admission: true
   validationFailureAction: Enforce
   background: true
+  emitWarning: false
   rules:
     - name: validate-resources
+      skipBackgroundRequests: true
       match:
         any:
           - resources:
               kinds: [Pod]
               namespaces: [django]
       validate:
+        allowExistingViolations: true
         message: "CPU and Memory resource requests/limits must be specified for all containers."
         pattern:
           spec:

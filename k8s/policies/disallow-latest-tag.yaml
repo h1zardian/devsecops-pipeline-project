@@ -6,16 +6,20 @@ metadata:
     policies.kyverno.io/title: Disallow Latest Tag
     policies.kyverno.io/category: Best Practices
 spec:
+  admission: true
   validationFailureAction: Enforce
   background: true
+  emitWarning: false
   rules:
     - name: validate-image-tag
+      skipBackgroundRequests: true
       match:
         any:
           - resources:
               kinds: [Pod]
               namespaces: [django]
       validate:
+        allowExistingViolations: true
         message: "Using the ':latest' image tag is prohibited."
         pattern:
           spec:
