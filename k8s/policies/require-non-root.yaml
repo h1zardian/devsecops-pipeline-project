@@ -14,9 +14,7 @@ spec:
         any:
           - resources:
               kinds: [Pod]
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: django-app
+              namespaces: [django]
       validate:
         message: "Containers must run as a non-root user (runAsNonRoot: true)."
         pattern:

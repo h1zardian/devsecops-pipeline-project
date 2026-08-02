@@ -54,22 +54,3 @@ module "eks" {
     ManagedBy   = "Terraform"
   }
 }
-
-# Pre-destroy cleanup: remove Kubernetes-created cloud resources that are not
-# managed by Terraform but can block VPC deletion. The shared script deletes
-# only load-balancer-owned security groups and preserves Terraform resources.
-resource "null_resource" "cleanup_k8s_cloud_resources" {
-  depends_on = [module.eks]
-
-  triggers = {
-    cleanup_script = abspath("${path.module}/../../../scripts/cleanup-k8s-cloud-resources.sh")
-    cluster_name   = var.cluster_name
-    region         = var.region
-    vpc_id         = var.vpc_id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "AWS_REGION=${self.triggers.region} ${self.triggers.cleanup_script} ${self.triggers.vpc_id}"
-  }
-}

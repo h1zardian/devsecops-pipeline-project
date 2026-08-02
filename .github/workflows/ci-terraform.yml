@@ -56,7 +56,9 @@ jobs:
   terraform-apply:
     name: Terraform Apply (Production / Environment Approval)
     needs: terraform-ci
-    if: github.ref == 'refs/heads/main'
+    # Infrastructure changes require an explicit manual dispatch. Pushes and
+    # pull requests still run validation, but cannot mutate AWS automatically.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     permissions:

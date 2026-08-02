@@ -20,8 +20,7 @@ externalSecrets:
 serviceAccount:
   create: true
   name: django-sa
-  annotations:
-    eks.amazonaws.com/role-arn: "arn:aws:iam::072329308666:role/devsecops-eso-irsa-role-dev"
+  annotations: {}
 
 # Default: an internet-facing AWS load balancer with an AWS-generated hostname.
 # For a custom HTTPS domain, change this to ClusterIP and enable ingress below.

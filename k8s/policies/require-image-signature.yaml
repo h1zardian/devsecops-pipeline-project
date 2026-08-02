@@ -15,13 +15,11 @@ spec:
         any:
           - resources:
               kinds: [Pod]
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: django-app
+              namespaces: [django]
       verifyImages:
         - imageReferences:
-            - "ghcr.io/*/*:*"
-            - "ghcr.io/*/*@sha256:*"
+            - "ghcr.io/h1zardian/devsecops-pipeline-project:*"
+            - "ghcr.io/h1zardian/devsecops-pipeline-project@sha256:*"
           attestors:
             - entries:
                 - keyless:

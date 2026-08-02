@@ -275,12 +275,9 @@ data "aws_iam_policy_document" "eso_irsa_assume" {
     }
 
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "${replace(var.eks_oidc_issuer_url, "https://", "")}:sub"
-      values = [
-        "system:serviceaccount:django:django-sa",
-        "system:serviceaccount:external-secrets:*"
-      ]
+      values   = ["system:serviceaccount:external-secrets:external-secrets"]
     }
 
     condition {
