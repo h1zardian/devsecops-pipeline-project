@@ -111,6 +111,10 @@ jobs:
       - name: Install Cosign
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          # Kyverno 1.18 verifies the legacy OCI signature attachment emitted
+          # by Cosign 2.x; Cosign 3's bundle format is not discovered yet.
+          cosign-release: v2.6.4
 
       - name: Install Syft
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
