@@ -7,6 +7,7 @@
     argocd_chart_version: "10.2.2"
     kyverno_chart_version: "3.8.2"
     eso_chart_version: "2.8.0"
+    eso_irsa_role_arn: "{{ lookup('env', 'ESO_IRSA_ROLE_ARN') }}"
     ingress_chart_version: "41.1.0"
     cert_manager_chart_version: "v1.21.1"
     # Set true (for example with --extra-vars) only after configuring the

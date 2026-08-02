@@ -16,6 +16,7 @@ spec:
     namespace: kyverno
   syncPolicy:
     automated:
+      enabled: true
       prune: true
       selfHeal: true
     syncOptions:

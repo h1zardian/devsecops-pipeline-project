@@ -23,3 +23,8 @@ output "github_oidc_role_arn" {
   description = "GitHub Actions AWS OIDC IAM Role ARN"
   value       = module.oidc.github_oidc_role_arn
 }
+
+output "eso_irsa_role_arn" {
+  description = "External Secrets Operator IRSA role ARN"
+  value       = module.oidc.eso_irsa_role_arn
+}

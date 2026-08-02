@@ -28,7 +28,7 @@ cluster-up:
 	@echo "==> [2/4] Updating local kubeconfig..."
 	aws eks update-kubeconfig --name devsecops-eks-cluster-dev --region ap-south-1
 	@echo "==> [3/4] Executing Day 0 Ansible Platform Bootstrap..."
-	cd infra/ansible && ansible-playbook -i inventory/localhost.yml playbooks/bootstrap-cluster.yml
+	cd infra/ansible && ESO_IRSA_ROLE_ARN="$$(cd ../terraform && terraform output -raw eso_irsa_role_arn)" ansible-playbook -i inventory/localhost.yml playbooks/bootstrap-cluster.yml
 	@echo "==> [4/4] Verifying cluster & application health..."
 	@$(MAKE) status
 
