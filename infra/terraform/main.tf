@@ -30,12 +30,13 @@ module "rds" {
 }
 
 module "oidc" {
-  source                 = "./modules/oidc"
-  github_repo            = var.github_repo
-  environment            = var.environment
-  eks_oidc_provider_arn  = module.eks.oidc_provider_arn
-  eks_oidc_issuer_url    = module.eks.cluster_oidc_issuer_url
-  secrets_kms_key_arn    = module.rds.kms_key_arn
-  terraform_state_bucket = "devsecops-tf-state-backend-${data.aws_caller_identity.current.account_id}"
-  terraform_state_key    = "platform/devsecops-eks.tfstate"
+  source                   = "./modules/oidc"
+  github_repo              = var.github_repo
+  github_oidc_provider_arn = var.github_oidc_provider_arn
+  environment              = var.environment
+  eks_oidc_provider_arn    = module.eks.oidc_provider_arn
+  eks_oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
+  secrets_kms_key_arn      = module.rds.kms_key_arn
+  terraform_state_bucket   = "devsecops-tf-state-backend-${data.aws_caller_identity.current.account_id}"
+  terraform_state_key      = "platform/devsecops-eks.tfstate"
 }

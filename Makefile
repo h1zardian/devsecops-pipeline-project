@@ -34,7 +34,8 @@ cluster-up:
 
 cluster-down:
 	@echo "==> [1/2] Cleaning up out-of-band Kubernetes cloud resources (ELBs/SGs)..."
-	./infra/scripts/cleanup-k8s-cloud-resources.sh || true
+	@VPC_ID="$$(terraform -chdir=infra/terraform output -raw vpc_id 2>/dev/null || true)"; \
+		./infra/scripts/cleanup-k8s-cloud-resources.sh "$$VPC_ID"
 	@echo "==> [2/2] Destroying AWS Infrastructure via Terraform..."
 	cd infra/terraform && terraform destroy -var-file=environments/dev.tfvars -auto-approve
 

@@ -3,6 +3,17 @@ variable "github_repo" {
   type        = string
 }
 
+variable "github_oidc_provider_arn" {
+  description = "Existing account-level GitHub Actions OIDC provider ARN; null creates and owns one"
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.github_oidc_provider_arn == null || can(regex("^arn:aws:iam::[0-9]{12}:oidc-provider/token\\.actions\\.githubusercontent\\.com$", var.github_oidc_provider_arn))
+    error_message = "github_oidc_provider_arn must be null or the account's token.actions.githubusercontent.com provider ARN."
+  }
+}
+
 variable "environment" {
   description = "Environment tag"
   type        = string

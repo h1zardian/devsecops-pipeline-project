@@ -34,6 +34,12 @@ variable "github_repo" {
   default     = "h1zardian/devsecops-pipeline-project"
 }
 
+variable "github_oidc_provider_arn" {
+  description = "Existing account-level GitHub Actions OIDC provider ARN; leave null to create one"
+  type        = string
+  default     = null
+}
+
 variable "cluster_endpoint_public_access_cidrs" {
   description = "List of CIDRs allowed to access EKS API server"
   type        = list(string)

@@ -8,10 +8,25 @@ REGION="${AWS_REGION:-ap-south-1}"
 VPC_ID="${1:-}"
 
 if [ -z "$VPC_ID" ]; then
-  # Automatically discover VPC ID for dev environment if not supplied
-  VPC_ID=$(aws ec2 describe-vpcs --region "$REGION" \
+  # Fall back to discovery only when Terraform cannot supply the exact VPC.
+  # Refuse an ambiguous match rather than cleaning a different deployment.
+  MATCHING_VPCS=$(aws ec2 describe-vpcs --region "$REGION" \
     --filters "Name=tag:Name,Values=devsecops-vpc-dev" \
-    --query "Vpcs[0].VpcId" --output text 2>/dev/null || true)
+    --query "Vpcs[].VpcId" --output text 2>/dev/null || true)
+
+  VPC_COUNT=0
+  for candidate in $MATCHING_VPCS; do
+    if [ -n "$candidate" ] && [ "$candidate" != "None" ]; then
+      VPC_COUNT=$((VPC_COUNT + 1))
+      VPC_ID="$candidate"
+    fi
+  done
+
+  if [ "$VPC_COUNT" -gt 1 ]; then
+    echo "==> Error: multiple devsecops-vpc-dev VPCs found: $MATCHING_VPCS"
+    echo "==> Pass the exact Terraform-managed VPC ID as the first argument."
+    exit 1
+  fi
 fi
 
 if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
@@ -79,6 +94,43 @@ for sg in $LB_SECURITY_GROUPS; do
   fi
 done
 
+# Kubernetes adds ingress rules to the node security group that reference each
+# dedicated load-balancer group. AWS will not delete a referenced security
+# group even after its load-balancer ENIs are gone, so remove only rules that
+# point to the confirmed Kubernetes groups captured above.
+echo "==> Removing Kubernetes load-balancer references from VPC security groups..."
+VPC_SECURITY_GROUPS=$(aws ec2 describe-security-groups --region "$REGION" \
+  --filters "Name=vpc-id,Values=$VPC_ID" --query 'SecurityGroups[].GroupId' \
+  --output text 2>/dev/null || true)
+
+for owner_sg in $VPC_SECURITY_GROUPS; do
+  for referenced_sg in $K8S_LB_SECURITY_GROUPS; do
+    RULE_IDS=$(aws ec2 describe-security-group-rules --region "$REGION" \
+      --filters "Name=group-id,Values=$owner_sg" \
+      --query "SecurityGroupRules[?ReferencedGroupInfo.GroupId=='$referenced_sg'].SecurityGroupRuleId" \
+      --output text 2>/dev/null || true)
+
+    for rule_id in $RULE_IDS; do
+      if [ -z "$rule_id" ] || [ "$rule_id" = "None" ]; then
+        continue
+      fi
+
+      if aws ec2 revoke-security-group-ingress --region "$REGION" \
+        --group-id "$owner_sg" --security-group-rule-ids "$rule_id" \
+        >/dev/null 2>&1; then
+        echo "Revoked ingress reference $rule_id from $owner_sg to $referenced_sg"
+      elif aws ec2 revoke-security-group-egress --region "$REGION" \
+        --group-id "$owner_sg" --security-group-rule-ids "$rule_id" \
+        >/dev/null 2>&1; then
+        echo "Revoked egress reference $rule_id from $owner_sg to $referenced_sg"
+      else
+        echo "==> Error: could not revoke $rule_id from $owner_sg"
+        exit 1
+      fi
+    done
+  done
+done
+
 # ELB network interfaces commonly remain for several minutes after the delete
 # API returns. Retry all confirmed Kubernetes groups in rounds so groups checked
 # early are retried after their network interfaces finally detach.
@@ -107,9 +159,9 @@ for attempt in $(seq 1 "$MAX_SG_DELETE_ATTEMPTS"); do
   fi
 
   if [ "$attempt" -eq "$MAX_SG_DELETE_ATTEMPTS" ]; then
-    echo "==> Warning: Kubernetes load-balancer security groups are still in use:$K8S_LB_SECURITY_GROUPS"
+    echo "==> Error: Kubernetes load-balancer security groups are still in use:$K8S_LB_SECURITY_GROUPS"
     echo "==> Rerun this cleanup after the AWS load-balancer network interfaces detach."
-    break
+    exit 1
   fi
 
   echo "==> Waiting 10s for load-balancer network interfaces to detach (attempt $attempt/$MAX_SG_DELETE_ATTEMPTS)..."
