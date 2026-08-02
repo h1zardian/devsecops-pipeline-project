@@ -137,3 +137,44 @@ resource "aws_iam_policy" "eso_secrets_manager" {
   policy      = data.aws_iam_policy_document.eso_secrets_manager.json
 }
 
+# IRSA Role for External Secrets Operator (managed natively by Terraform)
+data "aws_iam_policy_document" "eso_irsa_assume" {
+  count = var.eks_oidc_issuer_url != "" ? 1 : 0
+
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [var.eks_oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "${replace(var.eks_oidc_issuer_url, "https://", "")}:sub"
+      values   = [
+        "system:serviceaccount:django:django-sa",
+        "system:serviceaccount:external-secrets:*"
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(var.eks_oidc_issuer_url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "eso_irsa" {
+  count              = var.eks_oidc_issuer_url != "" ? 1 : 0
+  name               = "devsecops-eso-irsa-role-${var.environment}"
+  assume_role_policy = data.aws_iam_policy_document.eso_irsa_assume[0].json
+}
+
+resource "aws_iam_role_policy_attachment" "eso_irsa" {
+  count      = var.eks_oidc_issuer_url != "" ? 1 : 0
+  role       = aws_iam_role.eso_irsa[0].name
+  policy_arn = aws_iam_policy.eso_secrets_manager.arn
+}
+

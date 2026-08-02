@@ -29,7 +29,9 @@ module "rds" {
 }
 
 module "oidc" {
-  source      = "./modules/oidc"
-  github_repo = var.github_repo
-  environment = var.environment
+  source                = "./modules/oidc"
+  github_repo           = var.github_repo
+  environment           = var.environment
+  eks_oidc_provider_arn = module.eks.oidc_provider_arn
+  eks_oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
 }
