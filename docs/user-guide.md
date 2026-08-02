@@ -1,4 +1,4 @@
-# Operator Guide: Deploy, Use, and Decommission
+# User Guide: Deploy, Use, and Decommission
 
 [Project overview](../README.md) · [Architecture](architecture.md) · [Delivery pipelines](pipeline-flow.md)
 

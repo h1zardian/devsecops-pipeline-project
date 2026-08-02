@@ -44,4 +44,4 @@ global CVE suppression is not an accepted remediation.
 The default deployment is a short-lived portfolio lab. Public AWS-hostname
 endpoints use HTTP and must not handle sensitive or production data. Operational
 security assumptions and safer access options are documented in the
-[operator guide](../docs/user-guide.md).
+[user guide](../docs/user-guide.md).

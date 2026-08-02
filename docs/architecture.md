@@ -1,6 +1,6 @@
 # Architecture and System Boundaries
 
-[Project overview](../README.md) · [Operator guide](user-guide.md) · [Delivery pipelines](pipeline-flow.md)
+[Project overview](../README.md) · [User guide](user-guide.md) · [Delivery pipelines](pipeline-flow.md)
 
 This document describes the implemented architecture, the ownership boundary of
 each automation layer, and the security and availability decisions behind the
@@ -323,7 +323,7 @@ only after state is empty. AWS KMS keys remain visible but unusable during the
 mandatory seven-day pending-deletion period.
 
 The complete procedure and AWS verification queries are in the
-[operator guide](user-guide.md#12-clean-teardown).
+[user guide](user-guide.md#12-clean-teardown).
 
 ## Architecture tradeoffs
 
