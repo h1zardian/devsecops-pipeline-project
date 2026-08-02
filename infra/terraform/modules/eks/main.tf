@@ -1,7 +1,7 @@
 module "eks" {
   #checkov:skip=CKV_TF_1:Registry module is version constrained and checksummed in .terraform.lock.hcl.
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.0"
+  version = "~> 21.24"
 
   cluster_name    = var.cluster_name
   cluster_version = "1.34"
