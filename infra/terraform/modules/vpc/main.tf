@@ -3,9 +3,9 @@ data "aws_availability_zones" "available" {
 }
 
 module "vpc" {
-  #checkov:skip=CKV_TF_1:Registry module is version constrained and checksummed in .terraform.lock.hcl.
+  #checkov:skip=CKV_TF_1:Registry module is version constrained and checksummed in the root .terraform.lock.hcl.
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.0"
+  version = "~> 6.6"
 
   name = "devsecops-vpc-${var.environment}"
   cidr = var.vpc_cidr

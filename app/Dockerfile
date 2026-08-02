@@ -1,5 +1,5 @@
 # === Builder ===
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 # Set working directory
 WORKDIR /usr/src/app
@@ -23,7 +23,7 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
 
 # === Runner ===
-FROM python:3.12-slim-bookworm AS runner
+FROM python:3.14-slim-bookworm AS runner
 
 # Create the app user and group
 RUN addgroup --system app && adduser --system --group app
@@ -58,8 +58,8 @@ RUN pip install --no-cache-dir /wheels/* && \
       "setuptools>=78.1.1" \
       "wheel>=0.46.2" \
       "jaraco.context>=6.1.0" && \
-    find /usr/local/lib/python3.12/site-packages -type d -name sboms -prune -exec rm -rf {} + && \
-    rm -f /usr/local/lib/python3.12/site-packages/pip/_vendor/bom.cdx.json
+    find /usr/local/lib/python*/site-packages -type d -name sboms -prune -exec rm -rf {} + && \
+    rm -f /usr/local/lib/python*/site-packages/pip/_vendor/bom.cdx.json
 
 # Copy the entrypoint.sh script (if you have one)
 COPY --chown=app:app ./entrypoint.sh /home/app/web

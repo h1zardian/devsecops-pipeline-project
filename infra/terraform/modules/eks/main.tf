@@ -1,14 +1,14 @@
 module "eks" {
-  #checkov:skip=CKV_TF_1:Registry module is version constrained and checksummed in .terraform.lock.hcl.
+  #checkov:skip=CKV_TF_1:Registry module is version constrained and checksummed in the root .terraform.lock.hcl.
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.0"
+  version = "~> 21.24"
 
-  cluster_name    = var.cluster_name
-  cluster_version = "1.34"
+  name               = var.cluster_name
+  kubernetes_version = "1.34"
 
-  cluster_endpoint_public_access           = length(var.cluster_endpoint_public_access_cidrs) > 0
-  cluster_endpoint_public_access_cidrs     = var.cluster_endpoint_public_access_cidrs
-  cluster_endpoint_private_access          = true
+  endpoint_public_access                   = length(var.cluster_endpoint_public_access_cidrs) > 0
+  endpoint_public_access_cidrs             = var.cluster_endpoint_public_access_cidrs
+  endpoint_private_access                  = true
   enable_cluster_creator_admin_permissions = true
 
   vpc_id     = var.vpc_id
@@ -16,16 +16,17 @@ module "eks" {
 
   # KMS envelope encryption for Secrets
   create_kms_key = true
-  cluster_encryption_config = {
+  encryption_config = {
     resources = ["secrets"]
   }
 
   eks_managed_node_groups = {
     default = {
-      instance_types = ["t3.medium"]
-      min_size       = 2
-      max_size       = 3
-      desired_size   = 2
+      instance_types    = ["t3.medium"]
+      min_size          = 2
+      max_size          = 3
+      desired_size      = 2
+      enable_monitoring = true
 
       # Hardening: Enforce IMDSv2 (blocks SSRF token theft)
       metadata_options = {
