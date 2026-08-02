@@ -51,15 +51,73 @@ jobs:
           terraform init -backend=false
           terraform validate
 
-  terraform-apply:
-    name: Terraform Apply (Production / Environment Approval)
+  terraform-plan:
+    name: Terraform Plan (Read Only)
     needs: terraform-ci
-    # Infrastructure changes require an explicit manual dispatch. Pushes and
-    # pull requests still run validation, but cannot mutate AWS automatically.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # Keep infrastructure deployment status separate from the application
-    # status shown for the production workload.
+    environment: production-infrastructure-plan
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+
+      - name: Configure Read-Only AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_OIDC_ROLE_ARN }}
+          aws-region: ap-south-1
+          audience: sts.amazonaws.com
+
+      - name: Create Saved Terraform Plan
+        env:
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        run: |
+          cd infra/terraform
+          [ -f environments/dev.tfvars ] || cp environments/dev.tfvars.example environments/dev.tfvars
+          terraform init
+          terraform plan -var-file=environments/dev.tfvars -out=tfplan
+          terraform show -no-color tfplan > tfplan.txt
+          sha256sum tfplan > tfplan.sha256
+
+      - name: Publish Plan Summary
+        run: |
+          {
+            echo '## Terraform production plan'
+            echo
+            echo 'Review this plan before approving the `production-infrastructure` environment.'
+            echo
+            echo '<details><summary>Show plan</summary>'
+            echo
+            echo '```text'
+            sed -n '1,500p' infra/terraform/tfplan.txt
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Saved Plan
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: terraform-plan-${{ github.run_id }}
+          path: |
+            infra/terraform/tfplan
+            infra/terraform/tfplan.sha256
+          retention-days: 1
+          if-no-files-found: error
+
+  terraform-apply:
+    name: Terraform Apply (Required Approval)
+    needs: terraform-plan
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Required reviewers on this GitHub environment approve the exact plan
+    # published by the preceding read-only job.
     environment: production-infrastructure
     permissions:
       id-token: write
@@ -72,19 +130,25 @@ jobs:
         with:
           terraform_version: 1.15.8
 
-      - name: Configure AWS Credentials via OIDC
+      - name: Download Approved Plan
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: terraform-plan-${{ github.run_id }}
+          path: infra/terraform
+
+      - name: Verify Saved Plan Integrity
+        working-directory: infra/terraform
+        run: sha256sum --check tfplan.sha256
+
+      - name: Configure Apply AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ap-south-1
           audience: sts.amazonaws.com
 
-      - name: Terraform Plan & Apply
-        env:
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      - name: Apply Approved Terraform Plan
+        working-directory: infra/terraform
         run: |
-          cd infra/terraform
-          [ -f environments/dev.tfvars ] || cp environments/dev.tfvars.example environments/dev.tfvars
           terraform init
-          terraform plan -var-file=environments/dev.tfvars -out=tfplan
           terraform apply tfplan

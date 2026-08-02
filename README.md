@@ -114,9 +114,9 @@ An application change follows this path:
    identity and digest before Kubernetes admits the pod.
 
 Infrastructure mutation is deliberately separate: Terraform changes are linted
-and scanned on pushes and pull requests, but `terraform apply` runs only through
-an explicit manual dispatch using the protected `production-infrastructure`
-environment and short-lived AWS credentials.
+and scanned on pushes and pull requests. A manual dispatch uses a read-only OIDC
+role to publish a saved plan, then the protected `production-infrastructure`
+environment pauses for approval before a separate role applies that exact plan.
 
 See [pipeline flow and security gates](docs/pipeline-flow.md) for triggers,
 permissions, artifacts, trust decisions, failure semantics, and the GitOps
@@ -151,8 +151,8 @@ handoff.
 - The application starts with two replicas and can scale to five through HPA.
 - Readiness and liveness probes control traffic and recovery.
 - Argo CD automatically prunes stale resources and self-heals drift.
-- Database migrations run as a Helm lifecycle Job before the new application
-  becomes the stable desired state.
+- Database migrations run as an Argo CD sync hook after ESO configuration is
+  available and before the new Deployment wave begins.
 - Prometheus discovers the application through a `ServiceMonitor`, evaluates
   error-rate, crash-loop, and saturation alerts, and feeds a provisioned Grafana
   dashboard.
@@ -228,6 +228,24 @@ not a claim of production certification:
 
 These tradeoffs are documented so an evaluator can distinguish conscious
 engineering decisions from accidental omissions.
+
+### Demonstration cost envelope
+
+An always-on `dev` stack in `ap-south-1` is approximately **$240–$320 per
+month**, before meaningful data transfer or log ingestion. This planning range
+includes the $0.10/hour EKS control plane, two `t3.medium` nodes, a single-AZ
+RDS instance, one NAT gateway, three public load balancers in AWS-hostname mode,
+EBS, Secrets Manager, S3 state, and light CloudWatch usage. Actual regional
+rates and usage determine the bill; use the
+[AWS Pricing Calculator](https://calculator.aws/) before deployment.
+
+The dominant avoidable costs are elapsed time, NAT, and load balancers. A
+three-hour recruiter demonstration is therefore roughly **$1–$2** at steady
+state, while custom-domain mode reduces the three public service load balancers
+to one Traefik entry point. EKS itself is billed at
+[$0.10 per cluster-hour during standard support](https://aws.amazon.com/eks/pricing/),
+and NAT gateways are billed for both
+[gateway-hours and processed data](https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-pricing.html).
 
 ## Documentation
 

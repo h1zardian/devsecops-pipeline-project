@@ -82,8 +82,9 @@ The deployment sequence is:
 5. A change under `app/` starts the application pipeline. A successful run
    pushes and signs an image, then commits its immutable digest to
    `k8s/apps/django-app/values.yaml`.
-6. Argo CD sees that commit, Kyverno validates the image and pod controls, the
-   migration Job runs, and Kubernetes performs the rollout.
+6. Argo CD creates application configuration at sync wave `-2`, runs the
+   migration Job at wave `-1`, and starts the Deployment at wave `0`; Kyverno
+   validates the resulting pods before admission.
 
 ## 3. Prerequisites
 
@@ -341,30 +342,49 @@ If a transient AWS or Helm timeout interrupts the command, inspect the error and
 rerun `make up`. Terraform and the Ansible roles are designed to converge
 idempotently. Do not disable state locking.
 
-### 5.5 Configure GitHub's optional Terraform apply workflow
+### 5.5 Configure GitHub's optional reviewed Terraform workflow
 
 The first deployment must use a local AWS identity because Terraform creates the
-GitHub Actions OIDC role that later workflow runs use. After the local apply,
-retrieve the role ARN:
+GitHub Actions OIDC roles that later workflow runs use. After the local apply,
+retrieve both role ARNs:
 
 ```bash
 terraform -chdir=infra/terraform output -raw github_oidc_role_arn
+terraform -chdir=infra/terraform output -raw github_plan_oidc_role_arn
 ```
 
-Create the GitHub environment `production-infrastructure`, add the role ARN as
-`AWS_OIDC_ROLE_ARN`, and add the same database password as `DB_PASSWORD`. These
-can be configured through repository Settings, Environments, or with GitHub CLI:
+Create two GitHub environments:
+
+- `production-infrastructure-plan` holds `AWS_PLAN_OIDC_ROLE_ARN` and the same
+  database password as `DB_PASSWORD`. Its AWS identity is read-only apart from
+  acquiring the exact S3 state lockfile.
+- `production-infrastructure` holds `AWS_OIDC_ROLE_ARN`. In repository Settings,
+  configure at least one **required reviewer** for this environment. Do not
+  treat creation of an unprotected environment as an approval control.
+
+The environments and secrets can be initialized with GitHub CLI:
 
 ```bash
 REPOSITORY_SLUG="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 gh api --method PUT \
+  "repos/${REPOSITORY_SLUG}/environments/production-infrastructure-plan"
+gh api --method PUT \
   "repos/${REPOSITORY_SLUG}/environments/production-infrastructure"
+gh secret set AWS_PLAN_OIDC_ROLE_ARN --env production-infrastructure-plan
+gh secret set DB_PASSWORD --env production-infrastructure-plan
 gh secret set AWS_OIDC_ROLE_ARN --env production-infrastructure
-gh secret set DB_PASSWORD --env production-infrastructure
 ```
 
-The workflow validates Terraform on relevant pushes. AWS mutation occurs only
-after manually dispatching `Terraform Infrastructure CI/CD` from `main`.
+Then open **Settings → Environments → production-infrastructure**, add the
+required reviewer, disable administrator bypass where the repository plan
+supports it, and verify that the protection rule is visible before using the
+workflow. A manual dispatch from `main` first publishes a read-only plan and
+checksum. Inspect the `Terraform Plan (Read Only)` job summary; only then approve
+the waiting `Terraform Apply (Required Approval)` job. The apply job verifies
+and applies that exact one-day artifact.
+
+Saved Terraform plans can contain sensitive operational data. Do not download,
+re-upload, or retain the artifact outside the repository's authorized audience.
 
 ### 5.6 Optional protected-branch GitOps key
 
@@ -629,8 +649,9 @@ make ansible-bootstrap
 Change Terraform through a pull request and require every repository check,
 including Terraform validation, to pass. Apply locally with `make up` while the
 fork's `GIT_REPO_URL` is exported, or manually dispatch the Terraform workflow
-after its environment and OIDC secrets are configured. Always inspect the
-Terraform plan before approving a material change.
+after both environments and their OIDC secrets are configured. Inspect the plan
+job summary and approve only the expected resource changes. A plan job cannot
+mutate infrastructure; approval releases a different AWS role in the apply job.
 
 ### Refreshing secrets
 
@@ -699,9 +720,11 @@ kubectl get pods,jobs -n django
 kubectl get events -n django --sort-by='.lastTimestamp'
 ```
 
-Wait for the migration Job and rollout. If an admission request is denied,
-inspect Kyverno policy reports and controller logs rather than bypassing the
-policy.
+Argo CD applies the ConfigMap, ServiceAccount and ExternalSecret at sync wave
+`-2`. The migration Job waits at wave `-1`, and the Deployment remains at wave
+`0`. If migration is pending, check that ESO produced `django-app-secret`; if it
+failed, fix the Job before allowing a new rollout. If admission is denied,
+inspect Kyverno policy reports and controller logs rather than bypassing policy.
 
 ### ESO reports `SecretSyncedError`
 

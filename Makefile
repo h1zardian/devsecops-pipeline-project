@@ -77,4 +77,4 @@ kind-down:
 
 k8s-local-deploy:
 	@echo "==> Deploying Django Helm chart to local cluster with local secret..."
-	helm upgrade --install django-app k8s/apps/django-app --set externalSecrets.enabled=false --set sqlHost=postgres-service
+	helm upgrade --install django-app k8s/apps/django-app --set gitOps.enabled=false --set externalSecrets.enabled=false --set sqlHost=postgres-service
