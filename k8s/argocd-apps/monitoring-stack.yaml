@@ -20,6 +20,8 @@ spec:
       kind: ExternalSecret
       name: grafana-admin-credentials
       namespace: monitoring
+      jsonPointers:
+        - /metadata/annotations/force-sync
       managedFieldsManagers:
         - external-secrets
         - kubectl-annotate
