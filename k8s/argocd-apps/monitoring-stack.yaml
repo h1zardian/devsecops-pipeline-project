@@ -1,21 +1,20 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-app-of-apps
+  name: monitoring-stack
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: "{{ git_repo_url }}"
+    repoURL: https://github.com/h1zardian/devsecops-pipeline-project.git
     targetRevision: main
-    path: k8s/argocd-apps
-    directory:
-      recurse: true
+    path: k8s/apps/monitoring-stack
+    helm:
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true
