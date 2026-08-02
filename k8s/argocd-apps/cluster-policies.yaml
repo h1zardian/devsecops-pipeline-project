@@ -13,7 +13,11 @@ spec:
       recurse: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: kyverno
+  ignoreDifferences:
+    - group: kyverno.io
+      kind: ClusterPolicy
+      managedFieldsManagers:
+        - kyverno
   syncPolicy:
     automated:
       enabled: true
@@ -21,3 +25,4 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true

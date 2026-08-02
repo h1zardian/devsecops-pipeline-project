@@ -15,6 +15,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ExternalSecret
+      name: grafana-admin-credentials
+      namespace: monitoring
+      managedFieldsManagers:
+        - external-secrets
+        - kubectl-annotate
   syncPolicy:
     automated:
       enabled: true
@@ -23,3 +31,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
