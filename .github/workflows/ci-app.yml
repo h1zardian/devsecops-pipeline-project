@@ -142,6 +142,9 @@ jobs:
     with:
       image: ${{ needs.build-scan-push.outputs.base-image }}
       digest: ${{ needs.build-scan-push.outputs.image-digest }}
+      # SHA-pinned generator refs have no refs/tags/vX.Y.Z value for the
+      # prebuilt-binary lookup, so compile the trusted pinned source instead.
+      compile-generator: true
     secrets:
       registry-username: ${{ github.actor }}
       registry-password: ${{ secrets.GITHUB_TOKEN }}
