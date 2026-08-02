@@ -4,6 +4,10 @@ cluster_name = "devsecops-eks-cluster-dev"
 vpc_cidr     = "10.0.0.0/16"
 github_repo  = "h1zardian/devsecops-pipeline-project"
 
+# If the account already has GitHub's account-level OIDC provider, set its ARN
+# here so this deployment reuses it and does not delete it during teardown.
+# github_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+
 # Supply db_password through TF_VAR_db_password or an untracked dev.tfvars file.
 
 # Keep empty for a private-only EKS API. If workstation bootstrap access is

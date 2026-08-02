@@ -176,6 +176,13 @@ export TF_STATE_BUCKET=devsecops-tf-state-backend-ACCOUNT_ID
 make init-state
 ```
 
+When `TF_STATE_BUCKET` is omitted, `make init-state` derives
+`devsecops-tf-state-backend-ACCOUNT_ID` from the active AWS identity. The name
+in `backend.tf` must still match it exactly. The bootstrap is convergent: an
+existing bucket must be in the selected region, and versioning, AES-256 default
+encryption, and all four S3 public-access blocks are applied on every run. This
+makes a previously created but partially configured backend safe to reuse.
+
 Do not share one state key between unrelated deployments and do not delete the
 backend until the corresponding infrastructure has been successfully destroyed.
 Terraform state contains sensitive values even when CLI output marks them
@@ -251,7 +258,65 @@ Documentation links may continue pointing to the upstream project if that is
 intentional. Operational repository, registry, policy, fixture, and OIDC values
 must point to the fork.
 
-### 4.5 Run local validation
+### 4.5 Preflight clean and remnant AWS accounts
+
+Before the first plan, check for names and account-level identities that can
+collide with this deployment:
+
+```bash
+aws eks list-clusters --region ap-south-1
+aws rds describe-db-instances --region ap-south-1 \
+  --query 'DBInstances[].DBInstanceIdentifier'
+aws ec2 describe-vpcs --region ap-south-1 \
+  --filters Name=tag:Name,Values=devsecops-vpc-dev \
+  --query 'Vpcs[].VpcId'
+aws iam list-open-id-connect-providers
+aws iam get-role --role-name devsecops-github-actions-role-dev || true
+aws secretsmanager list-secrets --region ap-south-1 \
+  --include-planned-deletion --query 'SecretList[?Name==`dev/django`]'
+```
+
+Empty project-specific results describe a stock account and require no special
+handling. If the backend contains this deployment's valid state, initialize
+against that state and let Terraform converge or destroy it; do not start a
+second state key for the same resources.
+
+GitHub's OIDC provider is account-level and may legitimately be shared by other
+repositories. If this exact provider already exists, put its ARN in the ignored
+`dev.tfvars` file:
+
+```hcl
+github_oidc_provider_arn = "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+```
+
+Terraform will then reference but not own or delete the shared provider. Leave
+the value unset only when this project should create and own the provider. Set
+this before the first apply. To transfer an already managed provider to shared
+ownership, first set the ARN, list the current state address, then remove only
+the exact address printed by `state list`. Depending on whether the state has
+already seen this configuration, the address can be unindexed or end in `[0]`:
+
+```bash
+terraform -chdir=infra/terraform state list | \
+  grep 'module.oidc.aws_iam_openid_connect_provider.github'
+terraform -chdir=infra/terraform state rm \
+  'ADDRESS_PRINTED_BY_THE_PREVIOUS_COMMAND'
+terraform -chdir=infra/terraform plan -var-file=environments/dev.tfvars
+```
+
+`state rm` does not delete the provider. Do not use it for any other project
+resource, and do not apply if the subsequent plan proposes deleting the shared
+provider.
+
+If project-named EKS, RDS, VPC, IAM, or Secrets Manager resources exist but are
+not represented by the selected state, stop before apply. Determine their
+owner from tags, CloudTrail, and the old backend. Recover/import genuine project
+resources or remove verified abandoned resources first; never adopt or delete
+unrelated account resources merely because a name is similar. Multiple VPCs
+named `devsecops-vpc-dev` are treated as ambiguous by the cleanup script and
+require an explicit VPC ID.
+
+### 4.6 Run local validation
 
 ```bash
 terraform -chdir=infra/terraform fmt -check -recursive
@@ -815,13 +880,25 @@ make down
 ```
 
 `make down` first removes Kubernetes-created Classic/ELBv2 load balancers and
-their dedicated security groups, then runs `terraform destroy`. AWS can retain
+their dedicated security groups, then runs `terraform destroy`. The Make target
+passes the exact Terraform VPC ID; discovery is only a fallback and refuses
+multiple matching VPCs. Kubernetes-created node-security-group rules that refer
+to the load-balancer groups are revoked before deletion. AWS can retain
 load-balancer network interfaces for several minutes after accepting deletion,
-so the cleanup retries every confirmed Kubernetes security group for up to five
-minutes. Review any cleanup warning even if Terraform continues. If a group is
-still attached after that window, wait for the ELB network interface to detach,
-rerun `infra/scripts/cleanup-k8s-cloud-resources.sh`, and then rerun `make down`;
-the operations are idempotent.
+so cleanup retries every confirmed Kubernetes group for up to five minutes. It
+exits nonzero and prevents Terraform destroy if those groups remain. Wait for
+the ENIs to detach, rerun the cleanup with the captured VPC ID, and rerun
+`make down`; the operations are idempotent:
+
+```bash
+infra/scripts/cleanup-k8s-cloud-resources.sh "$PROJECT_VPC_ID"
+make down
+```
+
+Argo CD, Kyverno, ESO, Prometheus, Grafana, and the application are Kubernetes
+workloads in this design. They have no separate AWS management plane or teardown
+credentials; deleting the EKS cluster removes them. Their Kubernetes-created
+load balancers are the out-of-band resources handled by the cleanup script.
 
 Do not manually delete Terraform-managed VPC, EKS, RDS, IAM, or KMS resources
 before `terraform destroy`, because that creates state drift and makes a clean
@@ -858,6 +935,14 @@ aws ec2 describe-security-groups --region ap-south-1 \
 aws ec2 describe-nat-gateways --region ap-south-1 \
   --filter Name=vpc-id,Values="${PROJECT_VPC_ID}" \
   --query 'NatGateways[?State!=`deleted`].[NatGatewayId,State]'
+aws iam get-role --role-name devsecops-github-actions-role-dev || true
+aws iam get-role --role-name devsecops-github-actions-plan-role-dev || true
+aws iam get-role --role-name devsecops-eso-irsa-role-dev || true
+aws secretsmanager list-secrets --region ap-south-1 \
+  --include-planned-deletion --query 'SecretList[?Name==`dev/django`]'
+aws logs describe-log-groups --region ap-south-1 \
+  --log-group-name-prefix /aws/eks/devsecops-eks-cluster-dev \
+  --query 'logGroups[].logGroupName'
 ```
 
 NAT gateways and load-balancer network interfaces can take several minutes to
@@ -887,6 +972,11 @@ removed by the AWS teardown.
 
 To deploy again after permanent backend deletion, run `make init-state` and
 `terraform -chdir=infra/terraform init -reconfigure` before planning or applying.
+
+If account-level GitHub OIDC was supplied through
+`github_oidc_provider_arn`, it intentionally remains because this project did
+not own it. If the value was unset, the project-created provider is removed.
+Do not delete a shared provider as part of remnant cleanup.
 
 After the KMS waiting period expires and the optional backend deletion is
 complete, the project should leave no active AWS service resources.
