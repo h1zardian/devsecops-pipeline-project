@@ -22,4 +22,3 @@
   kubernetes.core.k8s:
     state: present
     definition: "{{ lookup('template', 'cluster-issuer.yaml.j2') | from_yaml }}"
-

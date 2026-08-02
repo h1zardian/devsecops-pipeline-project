@@ -1,4 +1,4 @@
 ---
 cert_manager_namespace: cert-manager
 cert_manager_chart_version: "v1.17.0"
-admin_email: "amanb.singh21@gmail.com"
+admin_email: "devsecops-admin@h1zardian.com"
