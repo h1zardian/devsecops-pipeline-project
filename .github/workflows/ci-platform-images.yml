@@ -47,7 +47,7 @@ jobs:
           - component: Prometheus
             image: quay.io/prometheus/prometheus:v3.13.2-distroless
           - component: Metrics Server
-            image: registry.k8s.io/metrics-server/metrics-server:v0.8.1
+            image: registry.k8s.io/metrics-server/metrics-server:v0.9.0
     steps:
       - name: Scan image for fixable HIGH/CRITICAL CVEs
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

@@ -11,6 +11,8 @@ spec:
     targetRevision: 3.13.1
     helm:
       valuesObject:
+        image:
+          tag: v0.9.0
         replicas: 2
         resources:
           requests:
