@@ -7,9 +7,9 @@
 [![SLSA aligned](docs/images/slsa-aligned.svg)](docs/pipeline-flow.md#stage-4-sbom-signature-and-provenance)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This portfolio project demonstrates a security-first delivery platform I
-designed, deployed, operated, and cleanly decommissioned—not merely an
-application deployment. It provisions a complete AWS environment with
+This portfolio project demonstrates how I would design, deploy, operate, and
+cleanly decommission a security-first delivery platform, not merely the
+deployment of an application. It provisions a complete AWS environment with
 Terraform, bootstraps Kubernetes controllers with Ansible, continuously delivers
 signed container images with GitHub Actions and Argo CD, enforces admission
 policy with Kyverno, synchronizes secrets through workload identity, and exposes
